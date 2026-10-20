@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Batches{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Batches</h1>
+        <p class="lede">The batch-wise register: who is on record for each year of admission.</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('profiles.batches') }}">Public batch pages</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="statstrip mb3">
+    <div><div class="n">{{ totals.batches }}</div><div class="l">Batches</div></div>
+    <div><div class="n">{{ totals.members }}</div><div class="l">Members</div></div>
+    <div><div class="n">{{ totals.pending }}</div><div class="l">To verify</div></div>
+    <div><div class="n">{{ totals.placements }}</div><div class="l">Placed</div></div>
+    <div><div class="n">{{ (totals.members / totals.batches)|round(1) if totals.batches else 0 }}</div><div class="l">Avg per batch</div></div>
+  </div>
+
+  {% if departments|length > 1 and MULTI_DEPARTMENT %}
+    <div class="card mb3">
+      <form class="filterbar" method="get">
+        <div class="field">
+          <label for="department">Department</label>
+          <select id="department" name="department">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+              <option value="{{ dept.id }}"{{ ' selected' if department_id == dept.id else '' }}>{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label class="sr-only">Apply</label>
+          <button class="btn block" type="submit">Filter</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if batches %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Year of admission</th><th>Members</th><th>Verified</th><th>To verify</th>
+            <th>Programmes</th><th>Seekers</th><th>Providers</th><th>Placed</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in batches %}
+            <tr>
+              <td>
+                <span class="strong">{{ row.year }}</span>
+                {% if row.graduated %}<div class="tiny muted">{{ row.graduated }} completed</div>{% endif %}
+              </td>
+              <td>
+                {{ row.total }}
+                {% if row.hidden %}<div class="tiny muted">{{ row.hidden }} unlisted</div>{% endif %}
+              </td>
+              <td>{% if row.verified %}<span class="badge ok">{{ row.verified }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td>
+                {% if row.pending %}
+                  <a class="badge warn" href="{{ url_for('admin.members', scope='pending', batch=row.year) }}">{{ row.pending }}</a>
+                {% else %}<span class="muted">—</span>{% endif %}
+                {% if row.blocked %}<div class="tiny"><span class="badge danger">{{ row.blocked }} suspended</span></div>{% endif %}
+              </td>
+              <td class="small">
+                {% for programme, count in row.programmes.items() %}
+                  <div>
+                    <a href="{{ url_for('admin.members', batch=row.year, programme=programme) }}">{{ programme }}</a>
+                    <span class="muted">· {{ count }}</span>
+                  </div>
+                {% endfor %}
+              </td>
+              <td>{{ row.seekers or '—' }}</td>
+              <td>{{ row.providers or '—' }}</td>
+              <td>{% if row.placements %}<span class="badge gold">{{ row.placements }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  <a class="btn sm outline" href="{{ url_for('admin.members', batch=row.year) }}">Members</a>
+                  <a class="btn sm outline" href="{{ url_for('profiles.batch', year=row.year) }}">Public</a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card mt3">
+      <div class="card-head"><h2>Batch size</h2></div>
+      {% set peak = batches|map(attribute='total')|max %}
+      <div class="stack">
+        {% for row in batches %}
+          <div>
+            <div class="row between tiny">
+              <a href="{{ url_for('admin.members', batch=row.year) }}">{{ row.year }}</a>
+              <span class="muted">
+                {{ row.total }} member{{ '' if row.total == 1 else 's' }}
+                {%- if row.pending %} · {{ row.pending }} awaiting verification{% endif %}
+              </span>
+            </div>
+            <div class="bar"><span style="width: {{ (row.total / peak * 100)|round }}%"></span></div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    {{ empty_state("No members on record yet.", "Batches appear here as alumni register.") }}
+  {% endif %}
+{% endblock %}

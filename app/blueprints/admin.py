@@ -16,7 +16,8 @@ from app.models import (
     Profile, Role, Setting, SitePage, Skill, User,
 )
 from app.utils import (
-    admin_required, delete_upload, multi_department_enabled, save_upload,
+    admin_required, delete_upload, multi_department_enabled, programme_choices,
+    save_upload,
 )
 
 admin_bp = Blueprint("admin", __name__)
@@ -98,6 +99,9 @@ def dashboard():
 def members():
     scope = request.args.get("scope", "all")
     q = (request.args.get("q") or "").strip()
+    batch = request.args.get("batch", type=int)
+    programme = (request.args.get("programme") or "").strip()
+    department_id = request.args.get("department", type=int)
 
     query = User.query
     if scope == "pending":
@@ -112,7 +116,26 @@ def members():
         like = f"%{q}%"
         query = query.filter(or_(User.full_name.ilike(like), User.email.ilike(like)))
 
-    pagination = query.order_by(User.created_at.desc()).paginate(
+    # Batch, programme and department live on the profile, as does batch sorting,
+    # so the join happens once if any of them is in play.
+    sort = request.args.get("sort", "recent")
+    if batch or programme or department_id or sort == "batch":
+        query = query.outerjoin(Profile)
+        if batch:
+            query = query.filter(Profile.batch_year == batch)
+        if programme:
+            query = query.filter(Profile.programme == programme)
+        if department_id:
+            query = query.filter(Profile.department_id == department_id)
+
+    if sort == "batch":
+        order = (Profile.batch_year.desc(), User.full_name)
+    elif sort == "name":
+        order = (User.full_name,)
+    else:
+        order = (User.created_at.desc(),)
+
+    pagination = query.order_by(*order).paginate(
         page=request.args.get("page", 1, type=int), per_page=20, error_out=False
     )
     counts = {
@@ -125,6 +148,70 @@ def members():
     return render_template(
         "admin/members.html", pagination=pagination, scope=scope, q=q,
         counts=counts, confirm_form=ConfirmForm(),
+        batch=batch, programme=programme, department_id=department_id, sort=sort,
+        batch_years=[row[0] for row in _admin_batch_rows()],
+        programmes=[p for p, _ in programme_choices()],
+        departments=Department.all_ordered(),
+    )
+
+
+def _admin_batch_rows():
+    """Every year of admission on record, newest first, with a member count."""
+    return (
+        db.session.query(Profile.batch_year, func.count(Profile.id))
+        .group_by(Profile.batch_year)
+        .order_by(Profile.batch_year.desc())
+        .all()
+    )
+
+
+@admin_bp.route("/batches")
+def batches():
+    """Batch-wise register: counts, verification state and placements per year."""
+    department_id = request.args.get("department", type=int)
+
+    base = db.session.query(Profile).join(User)
+    if department_id:
+        base = base.filter(Profile.department_id == department_id)
+
+    rows = {}
+    for profile in base.all():
+        row = rows.setdefault(profile.batch_year, {
+            "year": profile.batch_year, "total": 0, "verified": 0, "pending": 0,
+            "blocked": 0, "seekers": 0, "providers": 0, "hidden": 0,
+            "programmes": {}, "placements": 0, "graduated": 0,
+        })
+        user = profile.user
+        row["total"] += 1
+        if user.is_blocked:
+            row["blocked"] += 1
+        elif user.is_approved:
+            row["verified"] += 1
+        else:
+            row["pending"] += 1
+        if profile.is_job_seeker:
+            row["seekers"] += 1
+        if profile.is_job_provider:
+            row["providers"] += 1
+        if not profile.is_visible:
+            row["hidden"] += 1
+        if profile.graduation_year:
+            row["graduated"] += 1
+        row["programmes"][profile.programme] = row["programmes"].get(profile.programme, 0) + 1
+        row["placements"] += len([
+            a for a in user.applications if a.status == ApplicationStatus.HIRED
+        ])
+
+    batches = sorted(rows.values(), key=lambda r: r["year"], reverse=True)
+    totals = {
+        "batches": len(batches),
+        "members": sum(r["total"] for r in batches),
+        "pending": sum(r["pending"] for r in batches),
+        "placements": sum(r["placements"] for r in batches),
+    }
+    return render_template(
+        "admin/batches.html", batches=batches, totals=totals,
+        departments=Department.all_ordered(), department_id=department_id,
     )
 
 

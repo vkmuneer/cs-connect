@@ -4,6 +4,7 @@
   <a class="{{ 'active' if ep in ('admin.members', 'admin.edit_member') }}" href="{{ url_for('admin.members') }}">
     Members{% if pending_users_count %} <span class="badge warn">{{ pending_users_count }}</span>{% endif %}
   </a>
+  <a class="{{ 'active' if ep == 'admin.batches' }}" href="{{ url_for('admin.batches') }}">Batches</a>
   <a class="{{ 'active' if ep == 'admin.jobs' }}" href="{{ url_for('admin.jobs') }}">
     Postings{% if pending_jobs_count %} <span class="badge warn">{{ pending_jobs_count }}</span>{% endif %}
   </a>
