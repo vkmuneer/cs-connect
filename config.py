@@ -1,5 +1,6 @@
 """Configuration objects for CS Connect."""
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -28,10 +29,19 @@ class Config:
     # Sessions / security
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_NAME = "csconnect_session"
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_DURATION = timedelta(days=14)
     WTF_CSRF_TIME_LIMIT = None
+    # Trim what a response can carry away about the server.
+    MAX_COOKIE_SIZE = 4093
 
     # Domain settings
+    # The college is in Kerala: deadlines and "today" mean this timezone, not
+    # the server's. Both the model and the form read it, so they agree.
+    PORTAL_TIMEZONE = os.environ.get("PORTAL_TIMEZONE", "Asia/Kolkata")
     FIRST_BATCH_YEAR = 1995
     ITEMS_PER_PAGE = 12
 

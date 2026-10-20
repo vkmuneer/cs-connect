@@ -13,7 +13,7 @@
         <h1 class="mb0">{{ job.title }}</h1>
         <p class="muted mb1">
           {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
-          {%- if job.company_website %} · <a href="{{ job.company_website }}" target="_blank" rel="noopener">website</a>{% endif %}
+          {%- if job.company_website %} · <a href="{{ job.company_website|safe_url }}" target="_blank" rel="noopener">website</a>{% endif %}
         </p>
         <div class="chips">
           <span class="badge brand">{{ job.job_type }}</span>
@@ -31,7 +31,7 @@
           {% if job.accepts_portal_applications %}
             <a class="btn gold" href="{{ url_for('jobs.apply', job_id=job.id) }}">Apply now</a>
           {% elif job.apply_url %}
-            <a class="btn gold" href="{{ job.apply_url }}" target="_blank" rel="noopener">Apply on company site</a>
+            <a class="btn gold" href="{{ job.apply_url|safe_url }}" target="_blank" rel="noopener">Apply on company site</a>
           {% elif job.apply_email %}
             <a class="btn gold" href="mailto:{{ job.apply_email }}?subject={{ job.title|urlencode }}">Email your application</a>
           {% endif %}

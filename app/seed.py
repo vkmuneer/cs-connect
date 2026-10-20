@@ -7,7 +7,8 @@ from flask import current_app
 
 from app.extensions import db
 from app.models import (
-    MULTI_DEPARTMENT, Announcement, Application, ApplicationStatus, Coordinator,
+    FIRST_BATCH_YEAR, FUTURE_YEARS, MULTI_DEPARTMENT, Announcement, Application,
+    ApplicationStatus, Coordinator,
     CoordinatorRole, Department, Faculty, Job, JobStatus, Message, Profile,
     Programme, Role, Setting, SitePage, Skill, User,
 )
@@ -359,6 +360,10 @@ def _seed_settings():
     """College-wide mode ships switched off; an admin turns it on."""
     if Setting.get(MULTI_DEPARTMENT) is None:
         Setting.put(MULTI_DEPARTMENT, False)
+    if Setting.get(FIRST_BATCH_YEAR) is None:
+        Setting.put(FIRST_BATCH_YEAR, current_app.config.get("FIRST_BATCH_YEAR", 1995))
+    if Setting.get(FUTURE_YEARS) is None:
+        Setting.put(FUTURE_YEARS, 1)
     db.session.flush()
 
 

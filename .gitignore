@@ -2,6 +2,7 @@
 venv/
 instance/
 __pycache__/
+.pytest_cache/
 *.py[cod]
 app/static/uploads/photos/*
 app/static/uploads/resumes/*

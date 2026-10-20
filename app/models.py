@@ -68,8 +68,10 @@ class CoordinatorRole:
     ALL = [ALUMNI, STAFF, STUDENT, PLACEMENT, OTHER]
 
 
-# Feature switches held in the settings table.
+# Administrator-controlled settings held in the settings table.
 MULTI_DEPARTMENT = "multi_department_enabled"
+FIRST_BATCH_YEAR = "first_batch_year"      # oldest year of admission offered
+FUTURE_YEARS = "future_years"              # how many years ahead to offer
 
 
 JOB_TYPES = ["Full-time", "Part-time", "Internship", "Contract", "Freelance"]
@@ -291,7 +293,9 @@ class Job(db.Model):
 
     @property
     def is_expired(self):
-        return bool(self.deadline) and self.deadline < datetime.now(timezone.utc).date()
+        from app.utils import portal_today
+
+        return bool(self.deadline) and self.deadline < portal_today()
 
     @property
     def is_open(self):
@@ -343,6 +347,8 @@ class Application(db.Model):
 
     @classmethod
     def placement_stats(cls):
+        from app.utils import portal_year
+
         rows = cls.placements_query().all()
         return {
             "total": len(rows),
@@ -350,7 +356,7 @@ class Application(db.Model):
             "members": len({r.applicant_id for r in rows}),
             "this_year": len([
                 r for r in rows
-                if r.updated_at and r.updated_at.year == datetime.now(timezone.utc).year
+                if r.updated_at and r.updated_at.year == portal_year()
             ]),
         }
 
@@ -377,8 +383,20 @@ class Message(db.Model):
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
 
-    sender = db.relationship("User", foreign_keys=[sender_id], backref="sent_messages")
-    recipient = db.relationship("User", foreign_keys=[recipient_id], backref="received_messages")
+    # Both sides cascade: sender_id/recipient_id are NOT NULL, so without this
+    # SQLAlchemy would try to null them out when a member is deleted and fail.
+    sender = db.relationship(
+        "User", foreign_keys=[sender_id],
+        backref=db.backref(
+            "sent_messages", cascade="all, delete-orphan", passive_deletes=True,
+        ),
+    )
+    recipient = db.relationship(
+        "User", foreign_keys=[recipient_id],
+        backref=db.backref(
+            "received_messages", cascade="all, delete-orphan", passive_deletes=True,
+        ),
+    )
 
     @staticmethod
     def unread_count(user_id):
@@ -603,7 +621,9 @@ class Coordinator(db.Model):
     @classmethod
     def current_year_label(cls):
         """The academic year label for today — June starts a new year."""
-        today = datetime.now(timezone.utc).date()
+        from app.utils import portal_today
+
+        today = portal_today()
         start = today.year if today.month >= 6 else today.year - 1
         return f"{start}-{str(start + 1)[2:]}"
 

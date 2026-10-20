@@ -12,12 +12,21 @@ from app.models import (
     ActivityLog, Application, ApplicationStatus, Department, Job, Profile, Skill, User,
 )
 from app.utils import (
-    approved_required, delete_upload, department_choices, multi_department_enabled,
+    approved_required, batch_year_bounds, delete_upload, department_choices,
+    multi_department_enabled,
     parse_skills, prepare_department_fields, programme_choices,
     programme_department_map, resolve_department, save_upload,
 )
 
 profiles_bp = Blueprint("profiles", __name__)
+
+
+def _as_int(value):
+    """None unless `value` really is an integer."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _visible_profiles():
@@ -59,14 +68,19 @@ def directory():
                 Profile.location.ilike(like),
             )
         )
-    if form.department.data:
-        query = query.filter(Profile.department_id == int(form.department.data))
+    # Query strings are user input: a value that is not a number is ignored
+    # rather than raising.
+    department = _as_int(form.department.data)
+    if department is not None:
+        query = query.filter(Profile.department_id == department)
     if form.programme.data:
         query = query.filter(Profile.programme == form.programme.data)
-    if form.batch_year.data:
-        query = query.filter(Profile.batch_year == int(form.batch_year.data))
-    if form.graduation_year.data:
-        query = query.filter(Profile.graduation_year == int(form.graduation_year.data))
+    batch = _as_int(form.batch_year.data)
+    if batch is not None:
+        query = query.filter(Profile.batch_year == batch)
+    graduation = _as_int(form.graduation_year.data)
+    if graduation is not None:
+        query = query.filter(Profile.graduation_year == graduation)
     if form.skill.data:
         slug = Skill.slugify(form.skill.data)
         query = query.filter(Profile.skills.any(Skill.slug == slug))
@@ -240,7 +254,7 @@ def my_profile():
 def edit_profile():
     profile = current_user.profile
     if profile is None:
-        profile = Profile(user_id=current_user.id, batch_year=current_app.config["FIRST_BATCH_YEAR"])
+        profile = Profile(user_id=current_user.id, batch_year=batch_year_bounds()[0])
         db.session.add(profile)
         db.session.commit()
 

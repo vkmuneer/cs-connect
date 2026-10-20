@@ -100,6 +100,72 @@ config.py       configuration objects
 wsgi.py         entry point
 ```
 
+## Tests
+
+```bash
+pytest                      # the whole suite
+pytest tests/test_security.py -v
+```
+
+126 tests in five files, each running against a fresh in-memory database:
+
+| File | Covers |
+| --- | --- |
+| `tests/test_public_pages.py` | every visitor-facing page, filters, what the directory must not show |
+| `tests/test_authorization.py` | admin gates, profile visibility, resumes, messages, job ownership, privilege escalation |
+| `tests/test_security.py` | CSRF, XSS, SQL injection, IDOR, uploads, open redirect, session fixation, throttling, headers |
+| `tests/test_workflows.py` | registration → verification → posting → moderation → application → hire |
+| `tests/test_features.py` | batch browsing, the year range, placements, coordinators, college-wide mode |
+| `tests/test_models.py` | model helpers, password hashing, the portal clock, password policy |
+
+## Security
+
+What the application does, and what it deliberately leaves to the deployment.
+
+**In the application**
+
+- **Passwords**: Werkzeug hashing (salted per user), a minimum of 8 characters, and a
+  check against common passwords and the account's own email. Nothing is logged.
+- **Sign-in**: 8 failed attempts per address/email in 5 minutes, then a pause. A
+  missing account still performs a hash comparison, so timing does not reveal
+  which emails exist. The session id is replaced on sign-in.
+- **Suspension** takes effect on the next request, not at the next sign-in.
+- **CSRF**: every state-changing request carries a token, sign-out included.
+- **XSS**: Jinja autoescaping throughout, no `|safe`, no inline script. Stored
+  links are restricted to `http`/`https` on the way in and filtered again on the
+  way out, so a `javascript:` URL cannot reach an href.
+- **Authorization** is checked per object: profiles respect their visibility,
+  messages are readable only by their two parties, applications and applicant
+  lists only by the posting's owner or an administrator, and the whole admin
+  blueprint is gated in `before_request`.
+- **Uploads**: extension allowlist, `secure_filename` plus a random suffix,
+  images decoded to prove they are images (and re-encoded, which drops EXIF),
+  8 MB per request, and everything under `/static/uploads/` served as an
+  attachment with `nosniff`.
+- **Redirects** after sign-in must be relative; protocol-relative, backslash,
+  userinfo and control-character targets are refused.
+- **Headers** on every response: CSP (`script-src 'self'`), `X-Frame-Options:
+  DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS when served
+  over TLS. Signed-in pages are `no-store`.
+- **SQL**: the ORM throughout; the only raw statement is the schema sync, whose
+  table and column names come from a literal in `app/schema.py`.
+- **Foreign keys** are switched on for SQLite, so deleting a member really does
+  remove their profile, postings, applications and messages.
+- **Deadlines and "today"** use `PORTAL_TIMEZONE` (default `Asia/Kolkata`), so
+  the model and the form agree regardless of the server's clock.
+
+**For the deployment**
+
+- Serve over HTTPS with `FLASK_CONFIG=production`, which marks the cookies secure.
+- Put a real rate limiter in the proxy: the sign-in throttle is per worker and
+  in memory.
+- Run behind a production WSGI server; `flask run` is for development.
+- Set a long random `SECRET_KEY` (rotating it signs everyone out).
+- Back up `instance/` and `app/static/uploads/` — the database and the uploaded
+  resumes and photos.
+- There is no email delivery, so password resets are done by an administrator and
+  registrations are verified by hand. Email addresses are not confirmed.
+
 ## Notes
 
 - Uploads (resumes, photos) are written to `app/static/uploads/` and are not

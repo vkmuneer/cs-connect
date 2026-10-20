@@ -1,6 +1,4 @@
 """WTForms definitions."""
-from datetime import date
-
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileField
 from wtforms import (
@@ -8,15 +6,40 @@ from wtforms import (
     PasswordField, SelectField, StringField, SubmitField, TextAreaField, URLField,
 )
 from wtforms.validators import (
-    DataRequired, Email, EqualTo, Length, NumberRange, Optional, Regexp, URL,
+    DataRequired, Email, EqualTo, InputRequired, Length, NumberRange, Optional,
+    Regexp,
 )
 
 from app.models import JOB_TYPES, WORK_MODES, ApplicationStatus, CoordinatorRole, Programme
+from app.utils import SafeURL, StrongPassword, portal_today
 
-FIRST_BATCH = 1995
-CURRENT_YEAR = date.today().year
-YEAR_CHOICES = [(str(y), str(y)) for y in range(CURRENT_YEAR + 1, FIRST_BATCH - 1, -1)]
 PROGRAMME_CHOICES = [(p, p) for p in Programme.ALL]
+
+
+# Year-of-admission choices are read from the administrator's settings on every
+# form instantiation, so a new year needs no code change and no restart.
+def _years():
+    from app.utils import batch_year_choices
+
+    return batch_year_choices()
+
+
+def _years_with(blank_label):
+    from app.utils import batch_year_choices
+
+    return batch_year_choices(blank_label)
+
+
+def _years_studying():
+    return _years_with("— still studying —")
+
+
+def _years_any():
+    return _years_with("Any year")
+
+
+def _years_all_batches():
+    return _years_with("All batches")
 
 
 class LoginForm(FlaskForm):
@@ -31,7 +54,11 @@ class RegistrationForm(FlaskForm):
     email = EmailField("Email", validators=[DataRequired(), Email(), Length(max=160)])
     password = PasswordField(
         "Password",
-        validators=[DataRequired(), Length(min=8, message="Use at least 8 characters.")],
+        validators=[
+            DataRequired(),
+            Length(min=8, message="Use at least 8 characters."),
+            StrongPassword("email"),
+        ],
     )
     confirm = PasswordField(
         "Confirm password",
@@ -39,10 +66,9 @@ class RegistrationForm(FlaskForm):
     )
     department = SelectField("Department", choices=[], validators=[Optional()], validate_choice=False)
     programme = SelectField("Programme", choices=PROGRAMME_CHOICES, validators=[DataRequired()], validate_choice=False)
-    batch_year = SelectField("Year of joining", choices=YEAR_CHOICES, validators=[DataRequired()])
+    batch_year = SelectField("Year of joining", choices=_years, validators=[DataRequired()])
     graduation_year = SelectField(
-        "Year of completion", choices=[("", "— still studying —")] + YEAR_CHOICES,
-        validators=[Optional()],
+        "Year of completion", choices=_years_studying, validators=[Optional()],
     )
     register_number = StringField("University register number", validators=[Optional(), Length(max=40)])
     is_job_seeker = BooleanField("I am looking for job opportunities")
@@ -58,10 +84,9 @@ class ProfileForm(FlaskForm):
     full_name = StringField("Full name", validators=[DataRequired(), Length(min=3, max=120)])
     department = SelectField("Department", choices=[], validators=[Optional()], validate_choice=False)
     programme = SelectField("Programme", choices=PROGRAMME_CHOICES, validators=[DataRequired()], validate_choice=False)
-    batch_year = SelectField("Year of joining", choices=YEAR_CHOICES, validators=[DataRequired()])
+    batch_year = SelectField("Year of joining", choices=_years, validators=[DataRequired()])
     graduation_year = SelectField(
-        "Year of completion", choices=[("", "— still studying —")] + YEAR_CHOICES,
-        validators=[Optional()],
+        "Year of completion", choices=_years_studying, validators=[Optional()],
     )
     register_number = StringField("Register number", validators=[Optional(), Length(max=40)])
 
@@ -81,9 +106,9 @@ class ProfileForm(FlaskForm):
     show_phone = BooleanField("Show my phone number to other members")
     show_email = BooleanField("Show my email to other members")
 
-    linkedin_url = URLField("LinkedIn URL", validators=[Optional(), URL(), Length(max=255)])
-    github_url = URLField("GitHub URL", validators=[Optional(), URL(), Length(max=255)])
-    website_url = URLField("Portfolio / website", validators=[Optional(), URL(), Length(max=255)])
+    linkedin_url = URLField("LinkedIn URL", validators=[Optional(), SafeURL(), Length(max=255)])
+    github_url = URLField("GitHub URL", validators=[Optional(), SafeURL(), Length(max=255)])
+    website_url = URLField("Portfolio / website", validators=[Optional(), SafeURL(), Length(max=255)])
 
     skills = StringField(
         "Skills", validators=[Optional(), Length(max=1000)],
@@ -104,7 +129,7 @@ class ProfileForm(FlaskForm):
     is_job_provider = BooleanField("I am a job provider / recruiter")
     is_hiring = BooleanField("Currently hiring")
     company_name = StringField("Company name", validators=[Optional(), Length(max=160)])
-    company_website = URLField("Company website", validators=[Optional(), URL(), Length(max=255)])
+    company_website = URLField("Company website", validators=[Optional(), SafeURL(), Length(max=255)])
     designation_at_company = StringField("Your role there", validators=[Optional(), Length(max=120)])
 
     is_visible = BooleanField("List me in the alumni directory")
@@ -113,7 +138,10 @@ class ProfileForm(FlaskForm):
 
 class PasswordChangeForm(FlaskForm):
     current_password = PasswordField("Current password", validators=[DataRequired()])
-    new_password = PasswordField("New password", validators=[DataRequired(), Length(min=8)])
+    new_password = PasswordField(
+        "New password",
+        validators=[DataRequired(), Length(min=8), StrongPassword()],
+    )
     confirm = PasswordField(
         "Confirm new password",
         validators=[DataRequired(), EqualTo("new_password", message="Passwords do not match.")],
@@ -124,7 +152,7 @@ class PasswordChangeForm(FlaskForm):
 class JobForm(FlaskForm):
     title = StringField("Job title", validators=[DataRequired(), Length(max=160)])
     company = StringField("Company", validators=[DataRequired(), Length(max=160)])
-    company_website = URLField("Company website", validators=[Optional(), URL(), Length(max=255)])
+    company_website = URLField("Company website", validators=[Optional(), SafeURL(), Length(max=255)])
     location = StringField("Location", validators=[Optional(), Length(max=120)])
     job_type = SelectField("Job type", choices=[(t, t) for t in JOB_TYPES], validators=[DataRequired()])
     work_mode = SelectField("Work mode", choices=[(m, m) for m in WORK_MODES], validators=[DataRequired()])
@@ -148,7 +176,7 @@ class JobForm(FlaskForm):
     vacancies = IntegerField("Number of openings", default=1, validators=[Optional(), NumberRange(min=1, max=999)])
 
     accepts_portal_applications = BooleanField("Accept applications through this portal", default=True)
-    apply_url = URLField("External application link", validators=[Optional(), URL(), Length(max=255)])
+    apply_url = URLField("External application link", validators=[Optional(), SafeURL(), Length(max=255)])
     apply_email = EmailField("Application email", validators=[Optional(), Email(), Length(max=160)])
     deadline = DateField("Last date to apply", validators=[Optional()])
     submit = SubmitField("Submit opportunity")
@@ -166,7 +194,7 @@ class JobForm(FlaskForm):
                 "Provide an application link or email when portal applications are switched off."
             )
             ok = False
-        if self.deadline.data and self.deadline.data < date.today():
+        if self.deadline.data and self.deadline.data < portal_today():
             self.deadline.errors.append("The deadline cannot be in the past.")
             ok = False
         return ok
@@ -208,11 +236,9 @@ class DirectoryFilterForm(FlaskForm):
         "Programme", choices=[("", "All programmes")] + PROGRAMME_CHOICES,
         validators=[Optional()], validate_choice=False,
     )
-    batch_year = SelectField(
-        "Year of admission", choices=[("", "All batches")] + YEAR_CHOICES, validators=[Optional()],
-    )
+    batch_year = SelectField("Year of admission", choices=_years_all_batches, validators=[Optional()])
     graduation_year = SelectField(
-        "Year of completion", choices=[("", "Any year")] + YEAR_CHOICES, validators=[Optional()],
+        "Year of completion", choices=_years_any, validators=[Optional()],
     )
     skill = StringField("Skill", validators=[Optional(), Length(max=60)])
     role = SelectField(
@@ -246,7 +272,7 @@ class FacultyForm(FlaskForm):
     email = EmailField("Email", validators=[Optional(), Email(), Length(max=160)])
     phone = StringField("Phone", validators=[Optional(), Length(max=32)])
     photo = FileField("Photo", validators=[FileAllowed(["png", "jpg", "jpeg", "webp"], "Images only.")])
-    profile_url = URLField("Profile link", validators=[Optional(), URL(), Length(max=255)])
+    profile_url = URLField("Profile link", validators=[Optional(), SafeURL(), Length(max=255)])
     is_current = BooleanField("Currently serving", default=True)
     is_hod = BooleanField("Head of Department")
     served_from = IntegerField("Served from (year)", validators=[Optional(), NumberRange(min=1990, max=2100)])
@@ -288,7 +314,10 @@ class AdminUserForm(FlaskForm):
     role = SelectField("Role", choices=[("member", "Member"), ("admin", "Administrator")], validators=[DataRequired()])
     is_approved = BooleanField("Approved")
     is_blocked = BooleanField("Suspended")
-    new_password = PasswordField("Reset password to", validators=[Optional(), Length(min=8)])
+    new_password = PasswordField(
+        "Reset password to",
+        validators=[Optional(), Length(min=8), StrongPassword("email")],
+    )
     submit = SubmitField("Save changes")
 
 
@@ -307,7 +336,7 @@ class DepartmentForm(FlaskForm):
         description="One programme per line — these become the choices on registration.",
     )
     email = EmailField("Department email", validators=[Optional(), Email(), Length(max=160)])
-    website = URLField("Department page", validators=[Optional(), URL(), Length(max=255)])
+    website = URLField("Department page", validators=[Optional(), SafeURL(), Length(max=255)])
     is_active = BooleanField("Active — alumni of this department may register")
     sort_order = IntegerField("Display order", default=100, validators=[Optional(), NumberRange(min=0, max=999)])
     submit = SubmitField("Save department")
@@ -330,6 +359,19 @@ class CoordinatorForm(FlaskForm):
     is_active = BooleanField("Currently serving", default=True)
     sort_order = IntegerField("Display order", default=100, validators=[Optional(), NumberRange(min=0, max=999)])
     submit = SubmitField("Save coordinator")
+
+
+class PortalSettingsForm(FlaskForm):
+    """Which years of admission the portal offers."""
+    first_batch_year = IntegerField(
+        "First batch year", validators=[DataRequired(), NumberRange(min=1900, max=2100)],
+        description="The oldest year of admission alumni can choose.",
+    )
+    future_years = IntegerField(
+        "Future years to offer", validators=[InputRequired(), NumberRange(min=0, max=10)],
+        description="Years beyond the current one — 1 covers the next intake.",
+    )
+    submit = SubmitField("Save batch years")
 
 
 class FeatureToggleForm(FlaskForm):

@@ -113,6 +113,12 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 1.5rem 0; }
   border-radius: 999px; padding: .05rem .4rem; line-height: 1.5;
 }
 .nav-toggle { display: none; }
+.nav-signout { display: inline; margin: 0; }
+.nav-signout button {
+  background: none; border: 0; color: #e8f3ee; font: inherit; font-size: .9rem;
+  font-weight: 550; padding: .7rem .8rem; border-radius: 6px; cursor: pointer;
+}
+.nav-signout button:hover { background: rgba(255, 255, 255, .12); }
 
 /* ------------------------------------------------------------------ flash */
 .flashes { padding-top: 1rem; }

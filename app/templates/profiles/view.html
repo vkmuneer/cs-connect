@@ -105,7 +105,7 @@
             <dl class="kv">
               <dt>Company</dt><dd>{{ profile.company_name }}</dd>
               {% if profile.designation_at_company %}<dt>Role there</dt><dd>{{ profile.designation_at_company }}</dd>{% endif %}
-              {% if profile.company_website %}<dt>Website</dt><dd><a href="{{ profile.company_website }}" target="_blank" rel="noopener">{{ profile.company_website }}</a></dd>{% endif %}
+              {% if profile.company_website %}<dt>Website</dt><dd><a href="{{ profile.company_website|safe_url }}" target="_blank" rel="noopener">{{ profile.company_website }}</a></dd>{% endif %}
             </dl>
           {% endif %}
           {% if open_jobs %}
@@ -128,9 +128,9 @@
             {% if profile.phone and (profile.show_phone or viewer_is_self or current_user.is_admin) %}
               <dt>Phone</dt><dd>{{ profile.phone }}</dd>
             {% endif %}
-            {% if profile.linkedin_url %}<dt>LinkedIn</dt><dd><a href="{{ profile.linkedin_url }}" target="_blank" rel="noopener">Profile</a></dd>{% endif %}
-            {% if profile.github_url %}<dt>GitHub</dt><dd><a href="{{ profile.github_url }}" target="_blank" rel="noopener">Repositories</a></dd>{% endif %}
-            {% if profile.website_url %}<dt>Website</dt><dd><a href="{{ profile.website_url }}" target="_blank" rel="noopener">{{ profile.website_url }}</a></dd>{% endif %}
+            {% if profile.linkedin_url %}<dt>LinkedIn</dt><dd><a href="{{ profile.linkedin_url|safe_url }}" target="_blank" rel="noopener">Profile</a></dd>{% endif %}
+            {% if profile.github_url %}<dt>GitHub</dt><dd><a href="{{ profile.github_url|safe_url }}" target="_blank" rel="noopener">Repositories</a></dd>{% endif %}
+            {% if profile.website_url %}<dt>Website</dt><dd><a href="{{ profile.website_url|safe_url }}" target="_blank" rel="noopener">{{ profile.website_url }}</a></dd>{% endif %}
           </dl>
           {% if not viewer_is_self %}
             <a class="btn block mt1" href="{{ url_for('messages.compose', user_id=member.id) }}">Send a message</a>

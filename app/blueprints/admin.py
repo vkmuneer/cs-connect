@@ -1,4 +1,6 @@
 """Administration: verification queue, job moderation, department content."""
+from datetime import datetime, timezone
+
 from flask import (
     Blueprint, abort, flash, redirect, render_template, request, url_for,
 )
@@ -8,16 +10,17 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.forms import (
     AdminUserForm, AnnouncementForm, ConfirmForm, CoordinatorForm, DepartmentForm,
-    FacultyForm, FeatureToggleForm, JobModerationForm, SitePageForm,
+    FacultyForm, FeatureToggleForm, JobModerationForm, PortalSettingsForm,
+    SitePageForm,
 )
 from app.models import (
-    MULTI_DEPARTMENT, ActivityLog, Announcement, Application, ApplicationStatus,
-    Coordinator, Department, Faculty, Job, JobStatus, Message,
-    Profile, Role, Setting, SitePage, Skill, User,
+    FIRST_BATCH_YEAR, FUTURE_YEARS, MULTI_DEPARTMENT, ActivityLog, Announcement,
+    Application, ApplicationStatus, Coordinator, Department, Faculty, Job,
+    JobStatus, Message, Profile, Role, Setting, SitePage, Skill, User,
 )
 from app.utils import (
-    admin_required, delete_upload, multi_department_enabled, programme_choices,
-    save_upload,
+    admin_required, batch_year_bounds, delete_upload, multi_department_enabled,
+    programme_choices, save_upload,
 )
 
 admin_bp = Blueprint("admin", __name__)
@@ -599,34 +602,58 @@ def placements():
 @admin_bp.route("/departments", methods=["GET", "POST"])
 def departments():
     toggle_form = FeatureToggleForm()
-    if toggle_form.validate_on_submit():
-        Setting.put(MULTI_DEPARTMENT, bool(toggle_form.enabled.data))
+    settings_form = PortalSettingsForm()
+
+    # Two forms on one page: the submit button tells them apart.
+    if "first_batch_year" in request.form and settings_form.validate_on_submit():
+        Setting.put(FIRST_BATCH_YEAR, settings_form.first_batch_year.data)
+        Setting.put(FUTURE_YEARS, settings_form.future_years.data)
         ActivityLog.record(
             current_user, "setting_change",
-            f"college-wide mode {'enabled' if toggle_form.enabled.data else 'disabled'}",
+            f"batch years {settings_form.first_batch_year.data} "
+            f"+{settings_form.future_years.data} future",
         )
         db.session.commit()
-        if toggle_form.enabled.data:
-            flash(
-                "College-wide mode is on. Activate the departments you want to open — "
-                "alumni can then register against them.",
-                "success",
-            )
-        else:
-            flash(
-                "College-wide mode is off. The portal again serves the Department of "
-                "Computer Science only; existing records are untouched.",
-                "info",
-            )
+        first, last = batch_year_bounds()
+        flash(f"Years of admission now offered: {first} to {last}.", "success")
         return redirect(url_for("admin.departments"))
 
+    if "enabled" in request.form or (
+        request.method == "POST" and "first_batch_year" not in request.form
+    ):
+        if toggle_form.validate_on_submit():
+            Setting.put(MULTI_DEPARTMENT, bool(toggle_form.enabled.data))
+            ActivityLog.record(
+                current_user, "setting_change",
+                f"college-wide mode {'enabled' if toggle_form.enabled.data else 'disabled'}",
+            )
+            db.session.commit()
+            if toggle_form.enabled.data:
+                flash(
+                    "College-wide mode is on. Activate the departments you want to open — "
+                    "alumni can then register against them.",
+                    "success",
+                )
+            else:
+                flash(
+                    "College-wide mode is off. The portal again serves the Department of "
+                    "Computer Science only; existing records are untouched.",
+                    "info",
+                )
+            return redirect(url_for("admin.departments"))
+
+    first_year, last_year = batch_year_bounds()
     if request.method == "GET":
         toggle_form.enabled.data = multi_department_enabled()
+        settings_form.first_batch_year.data = first_year
+        settings_form.future_years.data = last_year - datetime.now(timezone.utc).year
 
     rows = Department.all_ordered()
     return render_template(
         "admin/departments.html", departments=rows, toggle_form=toggle_form,
-        confirm_form=ConfirmForm(), enabled=multi_department_enabled(),
+        settings_form=settings_form, confirm_form=ConfirmForm(),
+        enabled=multi_department_enabled(),
+        first_year=first_year, last_year=last_year,
     )
 
 

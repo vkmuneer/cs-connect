@@ -24,9 +24,64 @@ def create_app(config_name=None):
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_context(app)
+    _register_security(app)
     _register_cli(app)
 
     return app
+
+
+def _register_security(app):
+    """Response headers and a check that suspended accounts lose access at once."""
+    from flask import flash, redirect, request, url_for
+    from flask_login import current_user, logout_user
+
+    @app.before_request
+    def _reject_suspended_sessions():
+        # is_active only gates sign-in; a session opened before the suspension
+        # would otherwise keep working until it expired.
+        if current_user.is_authenticated and current_user.is_blocked:
+            logout_user()
+            flash(
+                "This account has been suspended. Please contact the department admin.",
+                "danger",
+            )
+            return redirect(url_for("auth.login"))
+        return None
+
+    @app.after_request
+    def _security_headers(response):
+        # Everything is served from this origin: no inline script, no framing,
+        # no content-type guessing, and no referrer leaking to third parties.
+        # script-src stays strict — there is no inline script anywhere, which is
+        # where XSS would land. style-src allows inline because the templates set
+        # computed widths (chart bars) as style attributes.
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline'; script-src 'self'; "
+            "connect-src 'self'; form-action 'self'; frame-ancestors 'none'; "
+            "base-uri 'self'; object-src 'none'",
+        )
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
+        )
+        if not app.debug and app.config.get("SESSION_COOKIE_SECURE"):
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+            )
+        # Signed-in pages carry personal data: keep them out of the browser cache
+        # so the back button after sign-out does not show them.
+        if current_user.is_authenticated and not request.path.startswith("/static/"):
+            response.headers.setdefault("Cache-Control", "no-store, max-age=0")
+
+        # Uploaded files are user content: never let a browser render them inline.
+        if request.path.startswith("/static/uploads/"):
+            response.headers["Content-Disposition"] = "attachment"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
 
 def _ensure_directories(app):

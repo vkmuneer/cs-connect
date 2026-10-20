@@ -1,23 +1,39 @@
 """Registration, sign-in and account security."""
 from datetime import datetime, timezone
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import (
+    Blueprint, current_app, flash, redirect, render_template, request, session, url_for,
+)
 from flask_login import current_user, login_required, login_user, logout_user
 from urllib.parse import urlparse
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
 from app.forms import LoginForm, PasswordChangeForm, RegistrationForm
 from app.models import ActivityLog, Profile, Role, User
 from app.utils import (
-    prepare_department_fields, programme_department_map, resolve_department,
+    clear_login_attempts, login_attempts_exhausted, prepare_department_fields,
+    programme_department_map, record_failed_login, resolve_department,
 )
 
 auth_bp = Blueprint("auth", __name__)
 
+# Compared against when no account matches, to keep sign-in timing uniform.
+DUMMY_PASSWORD_HASH = generate_password_hash("not-a-real-password")
+
 
 def _is_safe_redirect(target):
-    """Only allow relative redirects back into this application."""
-    if not target:
+    """Only allow relative redirects back into this application.
+
+    Browsers fold a backslash into a slash, so "/\\evil.example.com" and
+    "//evil.example.com" both navigate off-site even though urlparse reports
+    them as relative. Neither is accepted.
+    """
+    if not target or not isinstance(target, str):
+        return False
+    if "\\" in target or target.startswith("//") or "@" in target.split("?")[0]:
+        return False
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in target):  # CR/LF smuggling
         return False
     parsed = urlparse(target)
     return not parsed.netloc and not parsed.scheme and target.startswith("/")
@@ -32,7 +48,13 @@ def register():
     prepare_department_fields(form)
     if form.validate_on_submit():
         email = form.email.data.lower().strip()
+        if login_attempts_exhausted(email):
+            flash("Too many attempts. Please wait a few minutes and try again.", "danger")
+            return render_template(
+                "auth/register.html", form=form, programme_map=programme_department_map(),
+            )
         if User.query.filter_by(email=email).first():
+            record_failed_login(email)
             flash("An account with that email already exists. Try signing in.", "danger")
             return render_template(
                 "auth/register.html", form=form, programme_map=programme_department_map(),
@@ -88,15 +110,36 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower().strip()).first()
+        email = form.email.data.lower().strip()
+
+        if login_attempts_exhausted(email):
+            flash(
+                "Too many failed sign-in attempts. Please wait a few minutes and try again.",
+                "danger",
+            )
+            return render_template("auth/login.html", form=form)
+
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            # Hash anyway, so a missing account takes as long as a wrong password
+            # and cannot be told apart by timing.
+            check_password_hash(DUMMY_PASSWORD_HASH, form.password.data)
         if user is None or not user.check_password(form.password.data):
+            record_failed_login(email)
+            ActivityLog.record(None, "login_failed", email)
+            db.session.commit()
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
         if user.is_blocked:
+            record_failed_login(email)
             flash("This account has been suspended. Please contact the department admin.", "danger")
             return render_template("auth/login.html", form=form)
 
+        # A fresh session id on sign-in, so a fixated pre-login session is useless.
+        session.clear()
         login_user(user, remember=form.remember.data)
+        session.permanent = True
+        clear_login_attempts(email)
         user.last_login_at = datetime.now(timezone.utc)
         db.session.commit()
 
@@ -109,10 +152,11 @@ def login():
     return render_template("auth/login.html", form=form)
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
+    session.clear()
     flash("You have been signed out.", "info")
     return redirect(url_for("main.index"))
 

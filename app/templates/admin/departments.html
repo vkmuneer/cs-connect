@@ -42,6 +42,41 @@
     </div>
   </div>
 
+  <div class="card mb3">
+    <div class="row between">
+      <div style="max-width:60ch">
+        <h2 class="mb1">Batch years</h2>
+        <p class="small mb0">
+          Which years of admission alumni can choose when they register. Currently
+          offering <span class="strong">{{ first_year }} to {{ last_year }}</span>
+          ({{ last_year - first_year + 1 }} years). The list is built fresh on every
+          page, so the next intake appears on 1 January without a restart — there is
+          no batch to create by hand.
+        </p>
+      </div>
+      <form method="post" novalidate style="min-width:260px">
+        {{ settings_form.hidden_tag() }}
+        <div class="field">
+          {{ settings_form.first_batch_year.label }}
+          {{ settings_form.first_batch_year() }}
+          <div class="hint">{{ settings_form.first_batch_year.description }}</div>
+          {% if settings_form.first_batch_year.errors %}
+            <ul class="errors">{% for e in settings_form.first_batch_year.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+        <div class="field">
+          {{ settings_form.future_years.label }}
+          {{ settings_form.future_years() }}
+          <div class="hint">{{ settings_form.future_years.description }}</div>
+          {% if settings_form.future_years.errors %}
+            <ul class="errors">{% for e in settings_form.future_years.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+        <button class="btn block" type="submit">Save batch years</button>
+      </form>
+    </div>
+  </div>
+
   {% if not enabled %}
     <div class="alert alert-info">
       Departments activated below stay hidden from members until college-wide mode is on.
