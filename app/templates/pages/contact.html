@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Contact</div>
+    <h1>{{ page.title }}</h1>
+    <p class="lede">Reach the department office or the alumni cell.</p>
+  </div>
+
+  <div class="split">
+    <div class="card prose">
+      {% if page.body %}
+        <p>{{ page.body|nl2br }}</p>
+      {% else %}
+        <p class="muted">Contact details have not been filled in yet.</p>
+      {% endif %}
+    </div>
+    <aside class="stack">
+      <div class="card">
+        <h3>Department office</h3>
+        <dl class="kv">
+          <dt>Address</dt><dd>{{ DEPARTMENT_NAME }},<br>{{ COLLEGE_NAME }},<br>{{ COLLEGE_PLACE }} 673639</dd>
+          <dt>Email</dt><dd><a href="mailto:cs@sscollege.ac.in">cs@sscollege.ac.in</a></dd>
+          <dt>Phone</dt><dd>+91 483 285 3363</dd>
+        </dl>
+      </div>
+      <div class="card">
+        <h3>Portal support</h3>
+        <p class="small mb0">
+          For account verification, a password reset or a problem with a posting,
+          write to the department with your registered email address.
+        </p>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, file_field %}
+{% block title %}Apply — {{ job.title }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('jobs.listing') }}">Opportunities</a> /
+    <a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a> / Apply
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h1 class="mb1">Apply for {{ job.title }}</h1>
+      <p class="small muted">{{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}</p>
+
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.cover_letter, placeholder="Why you are a good fit — a few lines is enough.") }}
+
+        {% if profile and profile.resume_filename %}
+          <div class="alert alert-info">
+            Your profile resume will be sent with this application.
+            <a href="{{ url_for('profiles.download_resume', user_id=current_user.id) }}">Check it</a>
+            — or attach a different one below.
+          </div>
+        {% else %}
+          <div class="alert alert-warning">
+            You have no resume on your profile, so please attach one here.
+          </div>
+        {% endif %}
+
+        {{ file_field(form.resume, "PDF or Word, up to 8 MB.") }}
+
+        <div class="form-actions">
+          <button class="btn" type="submit">Submit application</button>
+          <a class="btn outline" href="{{ url_for('jobs.detail', job_id=job.id) }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>What the employer sees</h3>
+        <ul class="small" style="padding-left:1.1rem;margin:0">
+          <li>Your name and profile link</li>
+          <li>Your batch, programme and skills</li>
+          <li>Your message and the attached resume</li>
+        </ul>
+        <a class="btn outline block mt2" href="{{ url_for('profiles.edit_profile') }}">Update my profile first</a>
+      </div>
+      <div class="card">
+        <h3>The role</h3>
+        <dl class="kv">
+          <dt>Type</dt><dd>{{ job.job_type }}</dd>
+          <dt>Mode</dt><dd>{{ job.work_mode }}</dd>
+          <dt>Experience</dt><dd>{{ job.experience_label }}</dd>
+          <dt>Deadline</dt><dd>{{ job.deadline.strftime('%d %b %Y') if job.deadline else 'Open until filled' }}</dd>
+        </dl>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

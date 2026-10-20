@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Departments{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Departments</div>
+    <h1>Departments on {{ SITE_NAME }}</h1>
+    <p class="lede">
+      The portal began in the Department of Computer Science and is now open to these
+      departments of {{ COLLEGE_NAME }}.
+    </p>
+  </div>
+
+  {% if departments %}
+    <div class="grid cols-3">
+      {% for dept in departments %}
+        <div class="tile">
+          <div class="row between">
+            <h3 class="mb0">{{ dept.name }}</h3>
+            {% if dept.is_primary %}<span class="badge gold">Host</span>{% endif %}
+          </div>
+          {% if dept.short_name %}<div class="tiny muted">{{ dept.short_name }}</div>{% endif %}
+          {% if dept.description %}<p class="small mb0">{{ dept.description }}</p>{% endif %}
+          {% if dept.programme_list %}
+            <div class="chips">
+              {% for programme in dept.programme_list %}<span class="chip">{{ programme }}</span>{% endfor %}
+            </div>
+          {% endif %}
+          <div class="foot">
+            <a href="{{ url_for('profiles.directory', department=dept.id) }}">{{ dept.member_count }} member{{ '' if dept.member_count == 1 else 's' }}</a>
+            <a href="{{ url_for('profiles.batches', department=dept.id) }}">Batches →</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No departments are active yet.") }}
+  {% endif %}
+{% endblock %}

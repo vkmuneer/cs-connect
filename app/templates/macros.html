@@ -1,0 +1,130 @@
+{# ---------------------------------------------------------------- forms #}
+{% macro field(f, placeholder="", autofocus=False) %}
+  <div class="field">
+    {{ f.label }}
+    {{ f(placeholder=placeholder or f.description or "", autofocus=autofocus) }}
+    {% if f.description and placeholder %}<div class="hint">{{ f.description }}</div>{% endif %}
+    {% if f.errors %}
+      <ul class="errors">{% for e in f.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro check(f, toggle_target=None) %}
+  <div class="check">
+    {{ f(**{'data-toggle-target': toggle_target}) if toggle_target else f() }}
+    {{ f.label }}
+  </div>
+  {% if f.errors %}<ul class="errors">{% for e in f.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+{% endmacro %}
+
+{% macro file_field(f, note="") %}
+  <div class="field">
+    {{ f.label }}
+    {{ f() }}
+    {% if note %}<div class="hint">{{ note }}</div>{% endif %}
+    {% if f.errors %}<ul class="errors">{% for e in f.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+{% endmacro %}
+
+{# ----------------------------------------------------------- avatar/user #}
+{% macro avatar(member, size="") %}
+  {% set photo = member.profile.photo_filename if member.profile else None %}
+  {% if photo %}
+    <img class="avatar {{ size }}" src="{{ url_for('static', filename='uploads/photos/' ~ photo) }}" alt="{{ member.full_name }}">
+  {% else %}
+    <span class="avatar {{ size }}">{{ member.profile.initials if member.profile else member.full_name[:1]|upper }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro member_card(profile) %}
+  {% set member = profile.user %}
+  <div class="tile member-card">
+    {{ avatar(member) }}
+    <div class="body">
+      <div class="name"><a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a></div>
+      <div class="small muted">{{ profile.headline or profile.current_position or profile.programme }}</div>
+      <div class="tiny muted mt1">
+        {{ profile.programme }} · Batch {{ profile.display_batch }}
+        {%- if profile.location %} · {{ profile.location }}{% endif %}
+      </div>
+      <div class="chips mt1">
+        {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
+        {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
+        {% for skill in profile.skills[:3] %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ jobs #}
+{% macro job_status_badge(job) %}
+  {% if job.status == 'approved' and job.is_expired %}<span class="badge warn">Expired</span>
+  {% elif job.status == 'approved' %}<span class="badge ok">Live</span>
+  {% elif job.status == 'pending' %}<span class="badge warn">Awaiting approval</span>
+  {% elif job.status == 'rejected' %}<span class="badge danger">Rejected</span>
+  {% else %}<span class="badge">Closed</span>{% endif %}
+{% endmacro %}
+
+{% macro job_card(job, show_status=False) %}
+  <div class="tile">
+    <div>
+      <h3><a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a></h3>
+      <div class="meta">{{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}</div>
+    </div>
+    <div class="chips">
+      <span class="badge brand">{{ job.job_type }}</span>
+      <span class="badge">{{ job.work_mode }}</span>
+      <span class="badge">{{ job.experience_label }}</span>
+      {% if show_status %}{{ job_status_badge(job) }}{% endif %}
+    </div>
+    {% if job.skills %}
+      <div class="chips">
+        {% for skill in job.skills[:4] %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+      </div>
+    {% endif %}
+    <div class="foot">
+      <span>{{ job.created_at|timeago }}</span>
+      <span>{% if job.deadline %}Apply by {{ job.deadline.strftime('%d %b %Y') }}{% else %}Open until filled{% endif %}</span>
+    </div>
+  </div>
+{% endmacro %}
+
+{# ------------------------------------------------------------- utilities #}
+{% macro pagination(pages, endpoint) %}
+  {% if pages.pages > 1 %}
+    <nav class="pager">
+      {% if pages.has_prev %}
+        <a href="{{ url_for(endpoint, page=pages.prev_num, **kwargs) }}">← Previous</a>
+      {% endif %}
+      {% for p in pages.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+        {% if p %}
+          {% if p == pages.page %}
+            <span class="current">{{ p }}</span>
+          {% else %}
+            <a href="{{ url_for(endpoint, page=p, **kwargs) }}">{{ p }}</a>
+          {% endif %}
+        {% else %}
+          <span class="gap">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if pages.has_next %}
+        <a href="{{ url_for(endpoint, page=pages.next_num, **kwargs) }}">Next →</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endmacro %}
+
+{% macro confirm_button(form, action, label, cls="btn sm outline", confirm_text="Are you sure?") %}
+  <form class="inline-form" method="post" action="{{ action }}" data-confirm="{{ confirm_text }}">
+    {{ form.hidden_tag() }}
+    <button class="{{ cls }}" type="submit">{{ label }}</button>
+  </form>
+{% endmacro %}
+
+{% macro empty_state(title, note="") %}
+  <div class="empty">
+    <div class="strong">{{ title }}</div>
+    {% if note %}<div class="small mt1">{{ note }}</div>{% endif %}
+  </div>
+{% endmacro %}

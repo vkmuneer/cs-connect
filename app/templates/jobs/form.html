@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}{{ 'Edit opportunity' if job else 'Post an opportunity' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit opportunity' if job else 'Post an opportunity' }}</h1>
+    <p class="lede">
+      {% if current_user.is_admin %}
+        As an administrator your posting goes live immediately.
+      {% else %}
+        The department reviews each posting before it appears on the board.
+      {% endif %}
+    </p>
+  </div>
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div>
+        <fieldset class="card">
+          <legend>The role</legend>
+          {{ field(form.title, placeholder="e.g. Backend Engineer (Python)") }}
+          <div class="grid cols-2">
+            {{ field(form.company) }}
+            {{ field(form.company_website, placeholder="https://") }}
+          </div>
+          <div class="grid cols-3">
+            {{ field(form.job_type) }}
+            {{ field(form.work_mode) }}
+            {{ field(form.location, placeholder="City, State") }}
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Description</legend>
+          {{ field(form.description, placeholder="What the role is about, the team, the product…") }}
+          {{ field(form.responsibilities, placeholder="One responsibility per line") }}
+          {{ field(form.requirements, placeholder="Qualifications and must-haves, one per line") }}
+        </fieldset>
+      </div>
+
+      <aside class="stack">
+        <fieldset class="card">
+          <legend>Requirements</legend>
+          {{ field(form.skills, placeholder="Python, Django, SQL") }}
+          <div class="grid cols-2">
+            {{ field(form.min_experience) }}
+            {{ field(form.max_experience) }}
+          </div>
+          {{ field(form.salary_range, placeholder="e.g. ₹6,00,000 – ₹9,00,000 per year") }}
+          {{ field(form.vacancies) }}
+          {{ field(form.deadline) }}
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>How to apply</legend>
+          {{ check(form.accepts_portal_applications) }}
+          <p class="hint">Leave this ticked to collect applications and resumes here.</p>
+          {{ field(form.apply_url, placeholder="https://careers.example.com/…") }}
+          {{ field(form.apply_email, placeholder="careers@example.com") }}
+        </fieldset>
+
+        <div class="card">
+          <button class="btn block" type="submit">{{ 'Save changes' if job else 'Submit opportunity' }}</button>
+          <a class="btn outline block mt1" href="{{ url_for('jobs.detail', job_id=job.id) if job else url_for('jobs.listing') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+
+  {% if job and job.status != 'closed' %}
+    <div class="card mt3">
+      <div class="row between">
+        <div>
+          <h3 class="mb0">Close this opportunity</h3>
+          <p class="small muted mb0">It stays on your dashboard but no longer accepts applications.</p>
+        </div>
+        <form method="post" action="{{ url_for('jobs.close', job_id=job.id) }}" data-confirm="Close this opportunity?">
+          {{ form.csrf_token }}
+          <button class="btn sm danger" type="submit">Close posting</button>
+        </form>
+      </div>
+    </div>
+  {% elif job %}
+    <div class="card mt3">
+      <div class="row between">
+        <div>
+          <h3 class="mb0">Reopen this opportunity</h3>
+          <p class="small muted mb0">
+            {% if current_user.is_admin %}It goes live again straight away.
+            {% else %}It goes back to the department for approval.{% endif %}
+          </p>
+        </div>
+        <form method="post" action="{{ url_for('jobs.reopen', job_id=job.id) }}">
+          {{ form.csrf_token }}
+          <button class="btn sm ok" type="submit">Reopen posting</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Browse by batch{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('profiles.directory') }}">Alumni</a> / Batches
+    </div>
+    <h1>Browse by batch</h1>
+    <p class="lede">
+      Every year of admission, with the split across programmes. Pick a year to see
+      that batch, or filter the directory directly.
+    </p>
+  </div>
+
+  {% if departments %}
+    <div class="card mb3">
+      <form class="filterbar" method="get">
+        <div class="field">
+          <label for="department">Department</label>
+          <select id="department" name="department">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+              <option value="{{ dept.id }}"{{ ' selected' if department_id == dept.id else '' }}>{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label class="sr-only">Apply</label>
+          <button class="btn block" type="submit">Filter</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if batches %}
+    {% set peak = batches|map(attribute='total')|max %}
+    <div class="grid cols-3">
+      {% for row in batches %}
+        <a class="tile batch-tile" href="{{ url_for('profiles.batch', year=row.year, department=department_id) }}">
+          <div class="row between">
+            <div>
+              <div class="batch-year">{{ row.year }}</div>
+              <div class="tiny muted">Year of admission</div>
+            </div>
+            <div class="right">
+              <div class="batch-count">{{ row.total }}</div>
+              <div class="tiny muted">member{{ '' if row.total == 1 else 's' }}</div>
+            </div>
+          </div>
+          <div class="bar"><span style="width: {{ (row.total / peak * 100)|round }}%"></span></div>
+          <div class="chips">
+            {% for programme, count in row.programmes.items() %}
+              <span class="chip">{{ programme }} · {{ count }}</span>
+            {% endfor %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No batches to show yet.", "Members appear here once their registration is verified.") }}
+  {% endif %}
+
+  <div class="card mt3">
+    <div class="card-head"><h2>Filter by programme</h2></div>
+    <div class="chips">
+      {% for programme in programmes %}
+        <a class="chip" href="{{ url_for('profiles.directory', programme=programme) }}">{{ programme }}</a>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

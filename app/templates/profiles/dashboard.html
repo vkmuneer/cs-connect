@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, job_status_badge, empty_state %}
+{% block title %}My dashboard{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>My dashboard</h1>
+    <p class="lede">Your profile, your postings and everything you have applied to.</p>
+  </div>
+
+  <div class="split left">
+    <aside class="stack">
+      <div class="card center">
+        {{ avatar(current_user, "lg") }}
+        <h3 class="mt2 mb0">{{ current_user.full_name }}</h3>
+        <p class="small muted">{{ profile.headline or profile.programme }}</p>
+        <div class="chips" style="justify-content:center">
+          {% if current_user.is_admin %}<span class="badge brand">Administrator</span>{% endif %}
+          {% if current_user.is_approved %}<span class="badge ok">Verified</span>{% else %}<span class="badge warn">Pending</span>{% endif %}
+          {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
+          {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
+        </div>
+        <div class="stack mt2">
+          <a class="btn block" href="{{ url_for('profiles.edit_profile') }}">Edit my profile</a>
+          <a class="btn outline block" href="{{ url_for('profiles.view_profile', user_id=current_user.id) }}">View as others see it</a>
+          <a class="btn outline block" href="{{ url_for('auth.change_password') }}">Change password</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Profile completeness</h3>
+        {% set checks = [
+          ('Headline', profile.headline),
+          ('About', profile.about),
+          ('Current role', profile.current_position),
+          ('Location', profile.location),
+          ('Skills', profile.skills|length > 0),
+          ('Photo', profile.photo_filename),
+          ('Resume', profile.resume_filename),
+        ] %}
+        {% set done = checks|selectattr(1)|list|length %}
+        <div class="bar mb2"><span style="width: {{ (done / checks|length * 100)|round }}%"></span></div>
+        <p class="small muted">{{ done }} of {{ checks|length }} sections filled in.</p>
+        <ul class="list-plain small">
+          {% for label, value in checks if not value %}
+            <li>{{ label }} — <a href="{{ url_for('profiles.edit_profile') }}">add</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </aside>
+
+    <div class="stack">
+      <div class="grid cols-3">
+        <div class="card center"><div class="statstrip" style="border:0"><div><div class="n">{{ my_jobs|length }}</div><div class="l">My postings</div></div></div></div>
+        <div class="card center"><div class="statstrip" style="border:0"><div><div class="n">{{ my_applications|length }}</div><div class="l">My applications</div></div></div></div>
+        <div class="card center"><div class="statstrip" style="border:0"><div><div class="n">{{ received|length }}</div><div class="l">Applications received</div></div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>My postings</h2>
+          <a class="btn sm" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
+        </div>
+        {% if my_jobs %}
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Role</th><th>Status</th><th>Applicants</th><th>Views</th><th>Posted</th><th></th></tr></thead>
+              <tbody>
+                {% for job in my_jobs %}
+                  <tr>
+                    <td><a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a><div class="tiny muted">{{ job.company }}</div></td>
+                    <td>{{ job_status_badge(job) }}</td>
+                    <td>{{ job.applications|length }}</td>
+                    <td>{{ job.view_count }}</td>
+                    <td class="tiny muted nowrap">{{ job.created_at.strftime('%d %b %Y') }}</td>
+                    <td class="nowrap">
+                      <a class="btn sm outline" href="{{ url_for('jobs.applicants', job_id=job.id) }}">Applicants</a>
+                      <a class="btn sm outline" href="{{ url_for('jobs.edit', job_id=job.id) }}">Edit</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {{ empty_state("You have not posted anything yet.", "Know of an opening that suits our graduates? List it here.") }}
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>My applications</h2>
+          <a class="small" href="{{ url_for('jobs.matches') }}">See roles matching my skills →</a>
+        </div>
+        {% if my_applications %}
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Role</th><th>Company</th><th>Status</th><th>Applied</th></tr></thead>
+              <tbody>
+                {% for app in my_applications %}
+                  <tr>
+                    <td><a href="{{ url_for('jobs.detail', job_id=app.job_id) }}">{{ app.job.title }}</a></td>
+                    <td>{{ app.job.company }}</td>
+                    <td><span class="badge {{ 'ok' if app.status == 'hired' else ('danger' if app.status == 'rejected' else 'info') }}">{{ app.status|title }}</span></td>
+                    <td class="tiny muted nowrap">{{ app.created_at|timeago }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {{ empty_state("No applications yet.", "Browse the job board and apply in one click.") }}
+        {% endif %}
+      </div>
+
+      {% if received %}
+        <div class="card">
+          <div class="card-head"><h2>Recent applications to my postings</h2></div>
+          <ul class="list-plain">
+            {% for app in received %}
+              <li class="row between">
+                <div>
+                  <a href="{{ url_for('profiles.view_profile', user_id=app.applicant_id) }}">{{ app.applicant.full_name }}</a>
+                  <div class="tiny muted">applied for {{ app.job.title }} · {{ app.created_at|timeago }}</div>
+                </div>
+                <a class="btn sm outline" href="{{ url_for('jobs.applicants', job_id=app.job_id) }}">Review</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

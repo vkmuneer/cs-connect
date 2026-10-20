@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}Edit {{ label }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ label }}</h1>
+    <p class="lede">Plain text — line breaks are preserved on the public page.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.title) }}
+        <div class="field">
+          {{ form.body.label }}
+          {{ form.body(rows=20) }}
+          {% if form.body.errors %}
+            <ul class="errors">{% for e in form.body.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Save page</button>
+          <a class="btn outline" href="{{ url_for('admin.pages') }}">Cancel</a>
+        </div>
+      </div>
+      <aside class="card">
+        <h3>Where this appears</h3>
+        <p class="small mono">{{ slug }}</p>
+        <p class="small muted">
+          {% if slug == 'about-college' %}The “About the college” page.
+          {% elif slug == 'about-department' %}The department page, above the programme list.
+          {% elif slug.startswith('programme-') %}One of the programme blocks on the department page.
+          {% else %}The contact page.{% endif %}
+        </p>
+        {% if page %}
+          <p class="tiny muted mb0">Last updated {{ page.updated_at.strftime('%d %b %Y, %H:%M') if page.updated_at else '—' }}.</p>
+        {% endif %}
+      </aside>
+    </div>
+  </form>
+{% endblock %}

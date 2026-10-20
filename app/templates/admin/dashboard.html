@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, confirm_button, empty_state %}
+{% block title %}Administration{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Administration</h1>
+    <p class="lede">Verification queue, job moderation and department content.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="statstrip mb3">
+    <div><div class="n">{{ stats.members }}</div><div class="l">Members</div></div>
+    <div><div class="n">{{ stats.pending_members }}</div><div class="l">To verify</div></div>
+    <div><div class="n">{{ stats.open_jobs }}</div><div class="l">Live postings</div></div>
+    <div><div class="n">{{ stats.pending_jobs }}</div><div class="l">To moderate</div></div>
+    <div><div class="n">{{ stats.placements }}</div><div class="l">Placed</div></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head">
+          <h2>Awaiting verification</h2>
+          <a class="small" href="{{ url_for('admin.members', scope='pending') }}">Open the queue →</a>
+        </div>
+        {% if pending_members %}
+          <ul class="list-plain">
+            {% for member in pending_members %}
+              <li class="row between">
+                <div class="row">
+                  {{ avatar(member, "sm") }}
+                  <div>
+                    <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a>
+                    <div class="tiny muted">
+                      {{ member.email }}
+                      {%- if member.profile %} · {{ member.profile.programme }} · Batch {{ member.profile.display_batch }}{% endif %}
+                      · registered {{ member.created_at|timeago }}
+                    </div>
+                  </div>
+                </div>
+                <div class="btn-group">
+                  {{ confirm_button(confirm_form, url_for('admin.approve_member', user_id=member.id), 'Verify', 'btn sm ok', 'Verify this member?') }}
+                  {{ confirm_button(confirm_form, url_for('admin.block_member', user_id=member.id), 'Suspend', 'btn sm outline', 'Suspend this account?') }}
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state("No registrations waiting.") }}
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Postings awaiting approval</h2>
+          <a class="small" href="{{ url_for('admin.jobs', scope='pending') }}">Open the queue →</a>
+        </div>
+        {% if pending_jobs %}
+          <ul class="list-plain">
+            {% for job in pending_jobs %}
+              <li class="row between">
+                <div>
+                  <a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a>
+                  <div class="tiny muted">
+                    {{ job.company }} · posted by {{ job.posted_by.full_name }} · {{ job.created_at|timeago }}
+                  </div>
+                </div>
+                <div class="btn-group">
+                  {{ confirm_button(confirm_form, url_for('admin.approve_job', job_id=job.id), 'Approve', 'btn sm ok', 'Publish this posting?') }}
+                  <a class="btn sm outline" href="{{ url_for('admin.jobs', scope='pending') }}">Review</a>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          {{ empty_state("Nothing to moderate.") }}
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="stack">
+      <div class="card {{ 'feature-on' if stats.multi_department else 'feature-off' }}">
+        <h3>
+          College-wide mode
+          {% if stats.multi_department %}<span class="badge ok">On</span>{% else %}<span class="badge">Off</span>{% endif %}
+        </h3>
+        <p class="small mb1">
+          {% if stats.multi_department %}
+            Alumni of {{ stats.departments_active }} department{{ '' if stats.departments_active == 1 else 's' }} can register.
+          {% else %}
+            The portal serves the {{ DEPARTMENT_NAME }} only. {{ stats.departments_total }} departments
+            are set up and waiting; switch the mode on whenever the college is ready.
+          {% endif %}
+        </p>
+        <dl class="kv">
+          <dt>Departments</dt><dd>{{ stats.departments_active }} active of {{ stats.departments_total }}</dd>
+          <dt>Coordinators</dt><dd>{{ stats.coordinators }} serving</dd>
+        </dl>
+        <a class="btn outline block mt1" href="{{ url_for('admin.departments') }}">Manage departments</a>
+      </div>
+
+      <div class="card">
+        <h3>Content</h3>
+        <dl class="kv">
+          <dt>Applications</dt><dd>{{ stats.applications }}</dd>
+          <dt>Faculty records</dt><dd>{{ stats.faculty }}</dd>
+          <dt>Announcements</dt><dd>{{ stats.announcements }}</dd>
+          <dt>Skills tracked</dt><dd>{{ stats.skills }}</dd>
+          <dt>Messages sent</dt><dd>{{ stats.messages }}</dd>
+          <dt>Suspended</dt><dd>{{ stats.blocked }}</dd>
+        </dl>
+        <div class="btn-group mt2">
+          <a class="btn sm outline" href="{{ url_for('admin.edit_announcement') }}">New announcement</a>
+          <a class="btn sm outline" href="{{ url_for('admin.edit_faculty') }}">Add faculty</a>
+          <a class="btn sm outline" href="{{ url_for('admin.edit_coordinator') }}">Add coordinator</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Members by batch</h3>
+        {% if batch_spread %}
+          {% set peak = batch_spread|map(attribute=1)|max %}
+          <div class="stack">
+            {% for year, count in batch_spread %}
+              <div>
+                <div class="row between tiny"><span>{{ year }}</span><span class="muted">{{ count }}</span></div>
+                <div class="bar"><span style="width: {{ (count / peak * 100)|round }}%"></span></div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">No verified members yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Recent activity</h3></div>
+        {% if recent_logs %}
+          <ul class="timeline">
+            {% for log in recent_logs %}
+              <li>
+                <span class="strong">{{ log.action.replace('_', ' ')|title }}</span>
+                <div class="tiny muted">{{ log.detail }} · {{ log.created_at|timeago }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+          <a class="small" href="{{ url_for('admin.logs') }}">Full log →</a>
+        {% else %}
+          <p class="small muted mb0">No activity recorded yet.</p>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+{% endblock %}

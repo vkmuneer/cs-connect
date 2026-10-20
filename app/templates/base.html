@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %} · {{ SITE_NAME }}</title>
+  <meta name="description" content="{% block description %}{{ SITE_NAME }} — the alumni network of the {{ DEPARTMENT_NAME }}, {{ COLLEGE_NAME }}, {{ COLLEGE_PLACE }}.{% endblock %}">
+  <link rel="icon" href="{{ url_for('static', filename='img/college-emblem.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+
+<div class="topbar">
+  <div class="wrap">
+    <span>{{ DEPARTMENT_NAME }} · {{ COLLEGE_PLACE }}</span>
+    <span>
+      <a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">College website</a>
+      &nbsp;·&nbsp;
+      <a href="{{ url_for('main.contact') }}">Contact</a>
+    </span>
+  </div>
+</div>
+
+<header class="masthead">
+  <div class="wrap">
+    <a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/college-logo.png') }}" alt="{{ COLLEGE_NAME }}"></a>
+    <div class="titles">
+      <div class="college">{{ COLLEGE_NAME }}</div>
+      <div class="dept">{{ DEPARTMENT_NAME }} · Affiliated to the University of Calicut</div>
+    </div>
+    <div class="portal">
+      <div class="name">{{ SITE_NAME }}</div>
+      <div class="tag">Alumni Network</div>
+    </div>
+  </div>
+</header>
+
+{% set ep = request.endpoint or '' %}
+<nav class="nav">
+  <div class="wrap">
+    <button class="nav-toggle" type="button" aria-expanded="false">☰ Menu</button>
+    <div class="links" style="display:flex;align-items:center;gap:.15rem;flex-wrap:wrap;flex:1">
+      <a href="{{ url_for('main.index') }}" class="{{ 'active' if ep == 'main.index' }}">Home</a>
+      <a href="{{ url_for('main.about_department') }}" class="{{ 'active' if ep == 'main.about_department' }}">Department</a>
+      <a href="{{ url_for('main.faculty') }}" class="{{ 'active' if ep == 'main.faculty' }}">Faculty</a>
+      <a href="{{ url_for('profiles.directory') }}" class="{{ 'active' if ep == 'profiles.directory' }}">Alumni</a>
+      <a href="{{ url_for('profiles.batches') }}" class="{{ 'active' if ep in ('profiles.batches', 'profiles.batch') }}">Batches</a>
+      <a href="{{ url_for('jobs.listing') }}" class="{{ 'active' if ep == 'jobs.listing' }}">Opportunities</a>
+      <a href="{{ url_for('main.placements') }}" class="{{ 'active' if ep == 'main.placements' }}">Placements</a>
+      <a href="{{ url_for('main.coordinators') }}" class="{{ 'active' if ep == 'main.coordinators' }}">Coordinators</a>
+      {% if MULTI_DEPARTMENT %}
+        <a href="{{ url_for('main.departments') }}" class="{{ 'active' if ep == 'main.departments' }}">Departments</a>
+      {% endif %}
+      <a href="{{ url_for('main.announcements') }}" class="{{ 'active' if ep.startswith('main.announcement') }}">News</a>
+
+      <span class="spacer"></span>
+
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('messages.inbox') }}" class="{{ 'active' if ep.startswith('messages.') }}">
+          Messages{% if unread_messages %} <span class="pill">{{ unread_messages }}</span>{% endif %}
+        </a>
+        <a href="{{ url_for('profiles.my_profile') }}" class="{{ 'active' if ep == 'profiles.my_profile' }}">Dashboard</a>
+        {% if current_user.is_admin %}
+          <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">
+            Admin{% if pending_jobs_count + pending_users_count %} <span class="pill">{{ pending_jobs_count + pending_users_count }}</span>{% endif %}
+          </a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}">Sign out</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="{{ 'active' if ep == 'auth.login' }}">Sign in</a>
+        <a href="{{ url_for('auth.register') }}" class="{{ 'active' if ep == 'auth.register' }}">Register</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="wrap flashes">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% if current_user.is_authenticated and not current_user.can_participate %}
+  <div class="wrap flashes">
+    <div class="alert alert-warning">
+      Your membership is awaiting verification by the department. You can complete your
+      profile meanwhile — posting and applying open up once an administrator approves you.
+    </div>
+  </div>
+{% endif %}
+
+<main id="main">
+  {% block body %}
+    <div class="wrap">
+      {% block content %}{% endblock %}
+    </div>
+  {% endblock %}
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <img src="{{ url_for('static', filename='img/college-logo-footer.png') }}" alt="{{ COLLEGE_NAME }}">
+        <p class="mb0">
+          {{ DEPARTMENT_NAME }}<br>
+          {{ COLLEGE_NAME }}<br>
+          {{ COLLEGE_PLACE }} 673639
+        </p>
+      </div>
+      <div>
+        <h4>Department</h4>
+        <ul>
+          <li><a href="{{ url_for('main.about_college') }}">About the college</a></li>
+          <li><a href="{{ url_for('main.about_department') }}">About the department</a></li>
+          <li><a href="{{ url_for('main.faculty') }}">Faculty</a></li>
+          <li><a href="{{ url_for('main.announcements') }}">News &amp; events</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Network</h4>
+        <ul>
+          <li><a href="{{ url_for('profiles.directory') }}">Alumni directory</a></li>
+          <li><a href="{{ url_for('profiles.batches') }}">Browse by batch</a></li>
+          <li><a href="{{ url_for('main.placements') }}">Placements</a></li>
+          <li><a href="{{ url_for('main.coordinators') }}">Coordinators</a></li>
+          <li><a href="{{ url_for('jobs.listing') }}">Job board</a></li>
+          <li><a href="{{ url_for('profiles.directory', role='hiring') }}">Hiring alumni</a></li>
+          <li><a href="{{ url_for('auth.register') }}">Join the network</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:cs@sscollege.ac.in">cs@sscollege.ac.in</a></li>
+          <li>+91 483 285 3363</li>
+          <li><a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">sscollege.ac.in</a></li>
+          <li><a href="{{ url_for('main.contact') }}">Reach the department</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal">
+      <span>© {{ current_year }} {{ DEPARTMENT_NAME }}, {{ COLLEGE_NAME }}. All rights reserved.</span>
+      <span>{{ SITE_NAME }} — built and maintained by the department alumni.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

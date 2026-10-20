@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Messages{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Messages</h1>
+    <p class="lede">Conversations with recruiters, candidates and the department.</p>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <div class="card-head">
+        <h2>Inbox</h2>
+        <span class="small muted">{{ received|length }} message{{ '' if received|length == 1 else 's' }}</span>
+      </div>
+      {% if received %}
+        <ul class="list-plain">
+          {% for message in received %}
+            <li class="row between">
+              <div class="row">
+                {{ avatar(message.sender, "sm") }}
+                <div>
+                  <a class="{{ 'msg-unread' if not message.is_read }}" href="{{ url_for('messages.view', message_id=message.id) }}">{{ message.subject }}</a>
+                  <div class="tiny muted">
+                    from {{ message.sender.full_name }} · {{ message.created_at|timeago }}
+                    {%- if not message.is_read %} · <span class="badge info">New</span>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {{ empty_state("Your inbox is empty.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <div class="card-head"><h3>Sent</h3></div>
+        {% if sent %}
+          <ul class="list-plain">
+            {% for message in sent[:12] %}
+              <li>
+                <a class="small" href="{{ url_for('messages.view', message_id=message.id) }}">{{ message.subject }}</a>
+                <div class="tiny muted">to {{ message.recipient.full_name }} · {{ message.created_at|timeago }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted mb0">You have not sent any messages yet.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <h3>Start a conversation</h3>
+        <p class="small">Find a member in the directory and message them from their profile.</p>
+        <a class="btn outline block" href="{{ url_for('profiles.directory') }}">Browse the directory</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

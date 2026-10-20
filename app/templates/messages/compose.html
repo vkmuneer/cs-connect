@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, avatar %}
+{% block title %}Message {{ recipient.full_name }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('messages.inbox') }}">Messages</a> / New message
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h1 class="mb1">Message {{ recipient.full_name }}</h1>
+      <p class="small muted">They will see your name and profile along with the message.</p>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.subject, placeholder="e.g. Opening at my company") }}
+        {{ field(form.body, placeholder="Write your message…") }}
+        <div class="form-actions">
+          <button class="btn" type="submit">Send message</button>
+          <a class="btn outline" href="{{ url_for('profiles.view_profile', user_id=recipient.id) }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="card">
+      <h3>To</h3>
+      <div class="row">
+        {{ avatar(recipient) }}
+        <div>
+          <a href="{{ url_for('profiles.view_profile', user_id=recipient.id) }}">{{ recipient.full_name }}</a>
+          {% if recipient.profile %}
+            <div class="tiny muted">{{ recipient.profile.headline or recipient.profile.programme }}</div>
+            <div class="tiny muted">Batch {{ recipient.profile.display_batch }}</div>
+            {% if recipient.profile.open_to_work %}<span class="badge ok mt1">Open to work</span>{% endif %}
+            {% if recipient.profile.is_hiring %}<span class="badge gold mt1">Hiring</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

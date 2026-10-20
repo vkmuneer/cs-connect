@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "macros.html" import job_card, empty_state %}
+{% block title %}Matching opportunities{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Matching your skills</h1>
+    <p class="lede">
+      Live openings that ask for at least one of the skills on your profile.
+    </p>
+  </div>
+
+  {% if profile and profile.skills %}
+    <div class="card mb3">
+      <div class="row between">
+        <div class="chips">
+          <span class="small muted">Matching on:</span>
+          {% for skill in profile.skills %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+        </div>
+        <a class="btn sm outline" href="{{ url_for('profiles.edit_profile') }}">Edit my skills</a>
+      </div>
+    </div>
+
+    {% if jobs %}
+      <div class="grid cols-3">
+        {% for job in jobs %}{{ job_card(job) }}{% endfor %}
+      </div>
+    {% else %}
+      {{ empty_state("Nothing matches your skills right now.", "New postings are added regularly — check back soon.") }}
+    {% endif %}
+  {% else %}
+    {{ empty_state("Add some skills to your profile first.", "Matching works off the skill list on your profile.") }}
+    <div class="center mt2"><a class="btn" href="{{ url_for('profiles.edit_profile') }}">Add my skills</a></div>
+  {% endif %}
+{% endblock %}

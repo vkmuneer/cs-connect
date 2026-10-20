@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}Register{% endblock %}
+{% block content %}
+  <div class="auth-wrap" style="max-width:620px">
+    <div class="card">
+      <h1 class="mb1">Join {{ SITE_NAME }}</h1>
+      <p class="small muted">
+        Open to alumni and current students of
+        {% if MULTI_DEPARTMENT %}every participating department of {{ COLLEGE_NAME }}{% else %}the {{ DEPARTMENT_NAME }}{% endif %}.
+        An administrator verifies each registration before the profile is listed.
+      </p>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+
+        <fieldset>
+          <legend>Account</legend>
+          {{ field(form.full_name, autofocus=True) }}
+          {{ field(form.email, placeholder="you@example.com") }}
+          <div class="grid cols-2">
+            {{ field(form.password) }}
+            {{ field(form.confirm) }}
+          </div>
+        </fieldset>
+
+        <fieldset data-programme-map='{{ programme_map|tojson }}'>
+          <legend>Your time at the {{ 'college' if MULTI_DEPARTMENT else 'department' }}</legend>
+          {% if MULTI_DEPARTMENT %}
+            {{ field(form.department) }}
+          {% else %}
+            {{ form.department(type="hidden") }}
+          {% endif %}
+          {{ field(form.programme) }}
+          <div class="grid cols-2">
+            {{ field(form.batch_year) }}
+            {{ field(form.graduation_year) }}
+          </div>
+          {{ field(form.register_number) }}
+        </fieldset>
+
+        <fieldset>
+          <legend>How you want to use the portal</legend>
+          {{ check(form.is_job_seeker) }}
+          {{ check(form.is_job_provider) }}
+          <p class="hint mb0">You can be both, and you can change this later.</p>
+        </fieldset>
+
+        {{ check(form.accept_terms) }}
+
+        <div class="form-actions">
+          <button class="btn" type="submit">Create account</button>
+          <a class="small" href="{{ url_for('auth.login') }}">I already have an account</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

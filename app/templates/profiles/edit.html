@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check, file_field, confirm_button %}
+{% block title %}Edit my profile{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Edit my profile</h1>
+    <p class="lede">What you fill in here is what recruiters and batchmates see in the directory.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div>
+        <fieldset class="card">
+          <legend>Identity</legend>
+          {{ field(form.full_name) }}
+          {{ field(form.headline, placeholder="e.g. Senior Data Engineer | Python, Spark, AWS") }}
+          {{ field(form.about) }}
+        </fieldset>
+
+        <fieldset class="card" data-programme-map='{{ programme_map|tojson }}'>
+          <legend>Academic record</legend>
+          {% if MULTI_DEPARTMENT %}
+            {{ field(form.department) }}
+          {% else %}
+            {{ form.department(type="hidden") }}
+          {% endif %}
+          {{ field(form.programme) }}
+          <div class="grid cols-2">
+            {{ field(form.batch_year) }}
+            {{ field(form.graduation_year) }}
+          </div>
+          {{ field(form.register_number) }}
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Work</legend>
+          <div class="grid cols-2">
+            {{ field(form.current_position) }}
+            {{ field(form.current_company) }}
+          </div>
+          <div class="grid cols-2">
+            {{ field(form.experience_years) }}
+            {{ field(form.location, placeholder="City, State") }}
+          </div>
+          {{ field(form.skills, placeholder="Python, Django, React, MySQL") }}
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Portal roles</legend>
+          {{ check(form.is_job_seeker) }}
+          {{ check(form.open_to_work) }}
+          {{ check(form.is_job_provider, toggle_target="#employer-fields") }}
+          {{ check(form.is_hiring) }}
+          <div id="employer-fields" class="mt2">
+            {{ field(form.company_name) }}
+            <div class="grid cols-2">
+              {{ field(form.designation_at_company) }}
+              {{ field(form.company_website, placeholder="https://") }}
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <aside class="stack">
+        <fieldset class="card">
+          <legend>Photo &amp; resume</legend>
+          {% if profile.photo_filename %}
+            <img class="avatar lg mb2" src="{{ url_for('static', filename='uploads/photos/' ~ profile.photo_filename) }}" alt="">
+          {% endif %}
+          {{ file_field(form.photo, "PNG, JPG or WebP. Large images are resized automatically.") }}
+          {% if profile.resume_filename %}
+            <p class="small">
+              Current resume:
+              <a href="{{ url_for('profiles.download_resume', user_id=current_user.id) }}">download</a>
+            </p>
+          {% endif %}
+          {{ file_field(form.resume, "PDF or Word, up to 8 MB.") }}
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Contact &amp; links</legend>
+          {{ field(form.phone) }}
+          {{ check(form.show_email) }}
+          {{ check(form.show_phone) }}
+          {{ field(form.linkedin_url, placeholder="https://linkedin.com/in/…") }}
+          {{ field(form.github_url, placeholder="https://github.com/…") }}
+          {{ field(form.website_url, placeholder="https://") }}
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Visibility</legend>
+          {{ check(form.is_visible) }}
+          <p class="hint mb0">Unticking this hides you from the directory but keeps your account.</p>
+        </fieldset>
+
+        <div class="card">
+          <button class="btn block" type="submit">Save profile</button>
+          <a class="btn outline block mt1" href="{{ url_for('profiles.my_profile') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+
+  {% if profile.resume_filename %}
+    <div class="card mt3">
+      <div class="row between">
+        <div>
+          <h3 class="mb0">Remove my resume</h3>
+          <p class="small muted mb0">Employers will no longer be able to download it.</p>
+        </div>
+        <form method="post" action="{{ url_for('profiles.delete_resume') }}" data-confirm="Remove your resume from the portal?">
+          {{ form.csrf_token }}
+          <button class="btn sm danger" type="submit">Remove resume</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

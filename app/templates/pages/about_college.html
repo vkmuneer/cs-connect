@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / About the college</div>
+    <h1>{{ page.title }}</h1>
+    <p class="lede">{{ COLLEGE_NAME }}, {{ COLLEGE_PLACE }}</p>
+  </div>
+
+  <div class="split">
+    <div class="card prose">
+      {% if page.body %}
+        <p>{{ page.body|nl2br }}</p>
+      {% else %}
+        <p class="muted">This page has not been filled in yet.</p>
+      {% endif %}
+    </div>
+    <aside class="stack">
+      <div class="card">
+        <h3>At a glance</h3>
+        <dl class="kv">
+          <dt>Affiliation</dt><dd>University of Calicut</dd>
+          <dt>Management</dt><dd>Sullamussalam Oriental HSS Committee</dd>
+          <dt>Place</dt><dd>{{ COLLEGE_PLACE }}</dd>
+          <dt>Website</dt><dd><a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">sscollege.ac.in</a></dd>
+        </dl>
+      </div>
+      <div class="card">
+        <h3>The department</h3>
+        <p class="small">Read about the programmes, the faculty and the alumni network.</p>
+        <a class="btn outline block" href="{{ url_for('main.about_department') }}">About the department</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Coordinators{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Coordinators</div>
+    <h1>Alumni &amp; placement coordinators</h1>
+    <p class="lede">
+      The staff and student representatives who run the network, recorded for each
+      academic year.
+    </p>
+  </div>
+
+  <div class="tabs">
+    {% for y in years %}
+      <a class="{{ 'active' if y == year }}" href="{{ url_for('main.coordinators', year=y, department=department_id) }}">
+        {{ y }}{% if y == current_year %} <span class="badge ok">Current</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if departments %}
+    <div class="card mb3">
+      <form class="filterbar" method="get">
+        <input type="hidden" name="year" value="{{ year }}">
+        <div class="field">
+          <label for="department">Department</label>
+          <select id="department" name="department">
+            <option value="">All departments</option>
+            {% for dept in departments %}
+              <option value="{{ dept.id }}"{{ ' selected' if department_id == dept.id else '' }}>{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label class="sr-only">Apply</label>
+          <button class="btn block" type="submit">Filter</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+
+  {% if grouped %}
+    {% for dept, rows in grouped.items() %}
+      <div class="card mb3">
+        <div class="card-head">
+          <h2>{{ dept.name if dept else 'Department' }}</h2>
+          <span class="small muted">{{ year }} · {{ rows|length }} coordinator{{ '' if rows|length == 1 else 's' }}</span>
+        </div>
+        <div class="grid cols-2">
+          {% for row in rows %}
+            <div class="tile member-card">
+              {% if row.photo_filename %}
+                <img class="avatar" src="{{ url_for('static', filename='uploads/photos/' ~ row.photo_filename) }}" alt="{{ row.name }}">
+              {% else %}
+                <span class="avatar">{{ row.initials }}</span>
+              {% endif %}
+              <div class="body">
+                <div class="name">
+                  {% if row.user_id %}
+                    <a href="{{ url_for('profiles.view_profile', user_id=row.user_id) }}">{{ row.name }}</a>
+                  {% else %}{{ row.name }}{% endif %}
+                </div>
+                <div class="small"><span class="badge brand">{{ row.role }}</span></div>
+                {% if row.designation %}<div class="tiny muted mt1">{{ row.designation }}</div>{% endif %}
+                {% if row.notes %}<div class="small mt1">{{ row.notes }}</div>{% endif %}
+                <div class="tiny mt1">
+                  {% if row.email %}<a href="mailto:{{ row.email }}">{{ row.email }}</a>{% endif %}
+                  {%- if row.phone %} · {{ row.phone }}{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    {{ empty_state("No coordinators recorded for " ~ year ~ ".",
+                   "An administrator can add them from the admin area.") }}
+  {% endif %}
+{% endblock %}

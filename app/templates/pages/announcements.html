@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination as pager, empty_state %}
+{% block title %}News &amp; events{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / News &amp; events</div>
+    <h1>News &amp; events</h1>
+    <p class="lede">Announcements from the {{ DEPARTMENT_NAME }} and the alumni association.</p>
+  </div>
+
+  {% if pagination.items %}
+    <div class="stack">
+      {% for item in pagination.items %}
+        <article class="card">
+          <div class="row between">
+            <div class="chips">
+              <span class="badge {{ 'gold' if item.category == 'Event' else 'brand' }}">{{ item.category }}</span>
+              {% if item.is_pinned %}<span class="badge">Pinned</span>{% endif %}
+            </div>
+            <span class="tiny muted">{{ item.created_at.strftime('%d %B %Y') }}</span>
+          </div>
+          <h2 class="mt2"><a href="{{ url_for('main.announcement_detail', announcement_id=item.id) }}">{{ item.title }}</a></h2>
+          {% if item.event_date %}<p class="small"><span class="strong">Date:</span> {{ item.event_date.strftime('%d %B %Y') }}</p>{% endif %}
+          <p class="mb0">{{ item.body|truncate(260)|nl2br }}</p>
+          <a class="small" href="{{ url_for('main.announcement_detail', announcement_id=item.id) }}">Read more →</a>
+        </article>
+      {% endfor %}
+    </div>
+    {{ pager(pagination, 'main.announcements') }}
+  {% else %}
+    {{ empty_state("Nothing announced yet.") }}
+  {% endif %}
+{% endblock %}

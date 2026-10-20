@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Applicants — {{ job.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('jobs.listing') }}">Opportunities</a> /
+      <a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a> / Applicants
+    </div>
+    <div class="row between">
+      <div>
+        <h1>Applicants</h1>
+        <p class="lede">{{ job.title }} · {{ job.company }} — {{ applications|length }} application{{ '' if applications|length == 1 else 's' }}</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('jobs.detail', job_id=job.id) }}">Back to posting</a>
+    </div>
+  </div>
+
+  {% if applications %}
+    <div class="stack">
+      {% for app in applications %}
+        <div class="card">
+          <div class="row between">
+            <div class="row">
+              {{ avatar(app.applicant) }}
+              <div>
+                <a class="strong" href="{{ url_for('profiles.view_profile', user_id=app.applicant_id) }}">{{ app.applicant.full_name }}</a>
+                {% if app.applicant.profile %}
+                  <div class="tiny muted">
+                    {{ app.applicant.profile.programme }} · Batch {{ app.applicant.profile.display_batch }}
+                    {%- if app.applicant.profile.location %} · {{ app.applicant.profile.location }}{% endif %}
+                  </div>
+                {% endif %}
+                <div class="tiny muted">Applied {{ app.created_at|timeago }}</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="badge {{ 'ok' if app.status == 'hired' else ('danger' if app.status == 'rejected' else 'info') }}">{{ app.status|title }}</span>
+              <div class="btn-group mt1">
+                {% if app.resume_filename %}
+                  <a class="btn sm outline" href="{{ url_for('profiles.download_resume', user_id=app.applicant_id) }}">Resume</a>
+                {% endif %}
+                <a class="btn sm outline" href="{{ url_for('messages.compose', user_id=app.applicant_id) }}">Message</a>
+              </div>
+            </div>
+          </div>
+
+          {% if app.applicant.profile and app.applicant.profile.skills %}
+            <div class="chips mt2">
+              {% for skill in app.applicant.profile.skills[:8] %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+            </div>
+          {% endif %}
+
+          {% if app.cover_letter %}
+            <div class="card tight flat mt2">
+              <div class="tiny muted mb1">Message from the candidate</div>
+              <p class="small mb0">{{ app.cover_letter|nl2br }}</p>
+            </div>
+          {% endif %}
+
+          <form class="mt2" method="post" action="{{ url_for('jobs.update_application', application_id=app.id) }}">
+            {{ status_form.hidden_tag() }}
+            <div class="filterbar">
+              <div class="field">
+                <label for="status-{{ app.id }}">Status</label>
+                <select id="status-{{ app.id }}" name="status">
+                  {% for value, label in status_form.status.choices %}
+                    <option value="{{ value }}"{{ ' selected' if value == app.status else '' }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field" style="grid-column: span 2">
+                {{ status_form.employer_note.label }}
+                <input type="text" name="employer_note" value="{{ app.employer_note or '' }}" placeholder="Optional note sent to the candidate">
+              </div>
+              <div class="field">
+                <label class="sr-only">Update</label>
+                <button class="btn block" type="submit">Update status</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No applications yet.", "Share the posting with your batch group — applications land here.") }}
+  {% endif %}
+{% endblock %}

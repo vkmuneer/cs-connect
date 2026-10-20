@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "macros.html" import pagination as pager, empty_state %}
+{% block title %}Activity log{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Activity log</h1>
+    <p class="lede">Registrations, approvals, postings and resume downloads.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  {% if pagination.items %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>When</th><th>Action</th><th>Detail</th><th>By</th></tr></thead>
+        <tbody>
+          {% for log in pagination.items %}
+            <tr>
+              <td class="tiny muted nowrap">{{ log.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+              <td><span class="badge">{{ log.action.replace('_', ' ') }}</span></td>
+              <td class="small">{{ log.detail or '—' }}</td>
+              <td class="small">
+                {% if log.actor %}
+                  <a href="{{ url_for('profiles.view_profile', user_id=log.actor_id) }}">{{ log.actor.full_name }}</a>
+                {% else %}<span class="muted">—</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ pager(pagination, 'admin.logs') }}
+  {% else %}
+    {{ empty_state("Nothing logged yet.") }}
+  {% endif %}
+{% endblock %}

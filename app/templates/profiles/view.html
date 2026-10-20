@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, job_card, empty_state %}
+{% block title %}{{ member.full_name }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('main.index') }}">Home</a> /
+    <a href="{{ url_for('profiles.directory') }}">Alumni</a> / {{ member.full_name }}
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:flex-start;gap:1.25rem">
+      {{ avatar(member, "lg") }}
+      <div style="flex:1;min-width:0">
+        <div class="row between">
+          <div>
+            <h1 class="mb0">{{ member.full_name }}</h1>
+            <p class="muted mb1">{{ profile.headline or profile.current_position or profile.programme }}</p>
+          </div>
+          <div class="btn-group">
+            {% if viewer_is_self %}
+              <a class="btn outline sm" href="{{ url_for('profiles.edit_profile') }}">Edit profile</a>
+            {% elif current_user.is_authenticated %}
+              <a class="btn sm" href="{{ url_for('messages.compose', user_id=member.id) }}">Message</a>
+            {% else %}
+              <a class="btn sm" href="{{ url_for('auth.login', next=url_for('profiles.view_profile', user_id=member.id)) }}">Sign in to contact</a>
+            {% endif %}
+            {% if profile.resume_filename and current_user.is_authenticated %}
+              <a class="btn outline sm" href="{{ url_for('profiles.download_resume', user_id=member.id) }}">Resume</a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="chips">
+          {% if profile.placements %}<span class="badge gold">Placed via {{ SITE_NAME }}</span>{% endif %}
+          {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
+          {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
+          {% if profile.is_job_provider %}<span class="badge brand">Job provider</span>{% endif %}
+          {% if profile.is_job_seeker %}<span class="badge brand">Job seeker</span>{% endif %}
+          {% if not member.is_approved %}<span class="badge warn">Pending verification</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="split mt3">
+    <div class="stack">
+      {% if profile.placements %}
+        <div class="card placement-highlight">
+          <h2>Hired through {{ SITE_NAME }}</h2>
+          <ul class="list-plain">
+            {% for row in profile.placements %}
+              <li class="row between">
+                <div>
+                  <span class="strong">{{ row.job.title }}</span>
+                  <div class="tiny muted">
+                    {{ row.job.company }} · offer accepted {{ row.placed_on.strftime('%B %Y') }}
+                  </div>
+                </div>
+                <a class="btn sm outline" href="{{ url_for('jobs.detail', job_id=row.job_id) }}">The posting</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if profile.about %}
+        <div class="card prose">
+          <h2>About</h2>
+          <p class="mb0">{{ profile.about|nl2br }}</p>
+        </div>
+      {% endif %}
+
+      <div class="card">
+        <h2>Academic &amp; professional</h2>
+        <dl class="kv">
+          {% if MULTI_DEPARTMENT %}
+            <dt>Department</dt><dd>{{ profile.department_name }}</dd>
+          {% endif %}
+          <dt>Programme</dt><dd>{{ profile.programme }}</dd>
+          <dt>Batch</dt>
+          <dd>
+            <a href="{{ url_for('profiles.batch', year=profile.batch_year) }}">{{ profile.display_batch }}</a>
+          </dd>
+          {% if profile.current_position %}<dt>Designation</dt><dd>{{ profile.current_position }}</dd>{% endif %}
+          {% if profile.current_company %}<dt>Organisation</dt><dd>{{ profile.current_company }}</dd>{% endif %}
+          {% if profile.experience_years %}<dt>Experience</dt><dd>{{ profile.experience_years|round(1) }} years</dd>{% endif %}
+          {% if profile.location %}<dt>Location</dt><dd>{{ profile.location }}</dd>{% endif %}
+        </dl>
+      </div>
+
+      {% if profile.skills %}
+        <div class="card">
+          <h2>Skills</h2>
+          <div class="chips">
+            {% for skill in profile.skills %}
+              <a class="chip" href="{{ url_for('profiles.directory', skill=skill.name) }}">{{ skill.name }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if profile.is_job_provider and (profile.company_name or open_jobs) %}
+        <div class="card">
+          <h2>Hiring for</h2>
+          {% if profile.company_name %}
+            <dl class="kv">
+              <dt>Company</dt><dd>{{ profile.company_name }}</dd>
+              {% if profile.designation_at_company %}<dt>Role there</dt><dd>{{ profile.designation_at_company }}</dd>{% endif %}
+              {% if profile.company_website %}<dt>Website</dt><dd><a href="{{ profile.company_website }}" target="_blank" rel="noopener">{{ profile.company_website }}</a></dd>{% endif %}
+            </dl>
+          {% endif %}
+          {% if open_jobs %}
+            <div class="grid mt2">
+              {% for job in open_jobs %}{{ job_card(job) }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Contact</h3>
+        {% if can_see_contact %}
+          <dl class="kv">
+            {% if profile.show_email or viewer_is_self or current_user.is_admin %}
+              <dt>Email</dt><dd><a href="mailto:{{ member.email }}">{{ member.email }}</a></dd>
+            {% endif %}
+            {% if profile.phone and (profile.show_phone or viewer_is_self or current_user.is_admin) %}
+              <dt>Phone</dt><dd>{{ profile.phone }}</dd>
+            {% endif %}
+            {% if profile.linkedin_url %}<dt>LinkedIn</dt><dd><a href="{{ profile.linkedin_url }}" target="_blank" rel="noopener">Profile</a></dd>{% endif %}
+            {% if profile.github_url %}<dt>GitHub</dt><dd><a href="{{ profile.github_url }}" target="_blank" rel="noopener">Repositories</a></dd>{% endif %}
+            {% if profile.website_url %}<dt>Website</dt><dd><a href="{{ profile.website_url }}" target="_blank" rel="noopener">{{ profile.website_url }}</a></dd>{% endif %}
+          </dl>
+          {% if not viewer_is_self %}
+            <a class="btn block mt1" href="{{ url_for('messages.compose', user_id=member.id) }}">Send a message</a>
+          {% endif %}
+        {% else %}
+          <p class="small muted">Contact details are visible to signed-in members.</p>
+          <a class="btn block" href="{{ url_for('auth.login', next=url_for('profiles.view_profile', user_id=member.id)) }}">Sign in</a>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Member since</h3>
+        <p class="small mb0">{{ member.created_at.strftime('%B %Y') }}</p>
+      </div>
+
+      {% if current_user.is_authenticated and current_user.is_admin and not viewer_is_self %}
+        <div class="card">
+          <h3>Admin</h3>
+          <a class="btn outline block" href="{{ url_for('admin.edit_member', user_id=member.id) }}">Manage this account</a>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

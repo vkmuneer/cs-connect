@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "macros.html" import job_status_badge, confirm_button, pagination as pager, empty_state %}
+{% block title %}Postings{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Postings</h1>
+    <p class="lede">Approve, reject or remove opportunities submitted by members.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="tabs">
+    {% for value, label in [('pending', 'Awaiting approval'), ('approved', 'Live'),
+                            ('rejected', 'Rejected'), ('closed', 'Closed'), ('all', 'All')] %}
+      <a class="{{ 'active' if scope == value }}" href="{{ url_for('admin.jobs', scope=value) }}">
+        {{ label }} ({{ counts[value] }})
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if pagination.items %}
+    <div class="stack">
+      {% for job in pagination.items %}
+        <div class="card">
+          <div class="row between">
+            <div>
+              <h3 class="mb0"><a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a></h3>
+              <div class="small muted">
+                {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
+                · {{ job.job_type }} · {{ job.work_mode }} · {{ job.experience_label }}
+              </div>
+              <div class="tiny muted mt1">
+                Posted by <a href="{{ url_for('profiles.view_profile', user_id=job.posted_by_id) }}">{{ job.posted_by.full_name }}</a>
+                · {{ job.created_at|timeago }}
+                · {{ job.applications|length }} application{{ '' if job.applications|length == 1 else 's' }}
+                · {{ job.view_count }} views
+              </div>
+            </div>
+            <div class="right">
+              {{ job_status_badge(job) }}
+              <div class="btn-group mt2">
+                {% if job.status != 'approved' %}
+                  {{ confirm_button(confirm_form, url_for('admin.approve_job', job_id=job.id), 'Approve', 'btn sm ok', 'Publish this posting?') }}
+                {% endif %}
+                <a class="btn sm outline" href="{{ url_for('jobs.edit', job_id=job.id) }}">Edit</a>
+                {{ confirm_button(confirm_form, url_for('admin.delete_job', job_id=job.id), 'Delete', 'btn sm danger', 'Delete this posting and its applications?') }}
+              </div>
+            </div>
+          </div>
+
+          <p class="small mt2">{{ job.description|truncate(280) }}</p>
+
+          {% if job.status != 'rejected' %}
+            <form class="mt1" method="post" action="{{ url_for('admin.reject_job', job_id=job.id) }}">
+              {{ moderation_form.hidden_tag() }}
+              <div class="filterbar">
+                <div class="field" style="grid-column: span 3">
+                  <label for="note-{{ job.id }}">Reject with a reason (sent to the poster)</label>
+                  <input id="note-{{ job.id }}" type="text" name="rejection_note" placeholder="e.g. Not relevant to our graduates">
+                </div>
+                <div class="field">
+                  <label class="sr-only">Reject</label>
+                  <button class="btn block outline" type="submit">Reject</button>
+                </div>
+              </div>
+            </form>
+          {% elif job.rejection_note %}
+            <p class="small muted mb0">Rejected: {{ job.rejection_note }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {{ pager(pagination, 'admin.jobs', scope=scope) }}
+  {% else %}
+    {{ empty_state("No postings in this view.") }}
+  {% endif %}
+{% endblock %}

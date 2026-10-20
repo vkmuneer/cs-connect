@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check, file_field %}
+{% block title %}{{ 'Edit faculty' if member else 'Add faculty' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit faculty record' if member else 'Add a faculty record' }}</h1>
+    <p class="lede">Shown on the public faculty page, ordered by the display number.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.name) }}
+        <div class="grid cols-2">
+          {{ field(form.designation, placeholder="e.g. Assistant Professor") }}
+          {{ field(form.qualification, placeholder="e.g. M.Sc, Ph.D") }}
+        </div>
+        {{ field(form.specialization, placeholder="e.g. Machine Learning, NLP") }}
+        <div class="grid cols-2">
+          {{ field(form.email) }}
+          {{ field(form.phone) }}
+        </div>
+        {{ field(form.profile_url, placeholder="https://") }}
+      </div>
+
+      <aside class="stack">
+        <div class="card">
+          {% if member and member.photo_filename %}
+            <img class="avatar lg mb2" src="{{ url_for('static', filename='uploads/photos/' ~ member.photo_filename) }}" alt="">
+          {% endif %}
+          {{ file_field(form.photo, "PNG, JPG or WebP.") }}
+        </div>
+        <div class="card">
+          {{ check(form.is_current) }}
+          {{ check(form.is_hod) }}
+          <div class="grid cols-2">
+            {{ field(form.served_from) }}
+            {{ field(form.served_to) }}
+          </div>
+          {{ field(form.sort_order) }}
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save record</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.faculty') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

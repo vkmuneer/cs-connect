@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}{{ 'Edit announcement' if item else 'New announcement' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit announcement' if item else 'New announcement' }}</h1>
+    <p class="lede">Published announcements appear on the home page and the news listing.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.title) }}
+        {{ field(form.body, placeholder="Write the announcement…") }}
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {{ field(form.category) }}
+          {{ field(form.event_date) }}
+          {{ check(form.is_published) }}
+          {{ check(form.is_pinned) }}
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save announcement</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.announcements') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

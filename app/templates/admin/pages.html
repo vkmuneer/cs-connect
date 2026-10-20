@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Site pages{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Site pages</h1>
+    <p class="lede">The editable text behind the public pages of the portal.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Page</th><th>Title</th><th>Last updated</th><th></th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="small mono">{{ row.slug }}</td>
+            <td>
+              {{ row.page.title if row.page else row.label }}
+              {% if not row.page %}<span class="badge warn">Empty</span>{% endif %}
+              {% if row.page %}<div class="tiny muted">{{ row.page.body|truncate(110) }}</div>{% endif %}
+            </td>
+            <td class="tiny muted nowrap">
+              {{ row.page.updated_at.strftime('%d %b %Y') if row.page and row.page.updated_at else '—' }}
+            </td>
+            <td class="nowrap"><a class="btn sm outline" href="{{ url_for('admin.edit_page', slug=row.slug) }}">Edit</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

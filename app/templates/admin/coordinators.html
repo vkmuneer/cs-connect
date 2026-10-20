@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% block title %}Coordinators{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Coordinators</h1>
+        <p class="lede">Alumni, staff and student coordinators — per department, per academic year.</p>
+      </div>
+      <a class="btn" href="{{ url_for('admin.edit_coordinator') }}">Add coordinator</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="card mb3">
+    <form class="filterbar" method="get">
+      <div class="field">
+        <label for="year">Academic year</label>
+        <select id="year" name="year">
+          <option value="">All years</option>
+          {% for y in years %}
+            <option value="{{ y }}"{{ ' selected' if year == y else '' }}>{{ y }}{{ ' (current)' if y == current_year else '' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="department">Department</label>
+        <select id="department" name="department">
+          <option value="">All departments</option>
+          {% for dept in departments %}
+            <option value="{{ dept.id }}"{{ ' selected' if department_id == dept.id else '' }}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="sr-only">Apply</label>
+        <button class="btn block" type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+
+  {% if grouped %}
+    {% for academic_year, rows in grouped.items() %}
+      <div class="card mb3">
+        <div class="card-head">
+          <h2>
+            {{ academic_year }}
+            {% if academic_year == current_year %}<span class="badge ok">Current</span>{% endif %}
+          </h2>
+          <span class="small muted">{{ rows|length }} record{{ '' if rows|length == 1 else 's' }}</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Name</th><th>Role</th><th>Department</th><th>Contact</th><th>State</th><th></th></tr></thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>
+                    <span class="strong">{{ row.name }}</span>
+                    {% if row.designation %}<div class="tiny muted">{{ row.designation }}</div>{% endif %}
+                    {% if row.user_id %}<div class="tiny"><a href="{{ url_for('profiles.view_profile', user_id=row.user_id) }}">portal account</a></div>{% endif %}
+                  </td>
+                  <td><span class="badge brand">{{ row.role }}</span></td>
+                  <td class="small">
+                    {{ row.department.name if row.department else '—' }}
+                    {% if row.department and not row.department.is_active %}<div class="tiny muted">(department disabled)</div>{% endif %}
+                  </td>
+                  <td class="small">
+                    {% if row.email %}{{ row.email }}{% endif %}
+                    {% if row.phone %}<div class="tiny muted">{{ row.phone }}</div>{% endif %}
+                  </td>
+                  <td>{% if row.is_active %}<span class="badge ok">Serving</span>{% else %}<span class="badge">Past</span>{% endif %}</td>
+                  <td class="nowrap">
+                    <div class="btn-group">
+                      <a class="btn sm outline" href="{{ url_for('admin.edit_coordinator', coordinator_id=row.id) }}">Edit</a>
+                      {{ confirm_button(confirm_form, url_for('admin.delete_coordinator', coordinator_id=row.id), 'Delete', 'btn sm danger', 'Remove this coordinator record?') }}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    {{ empty_state("No coordinator records yet.",
+                   "Add this year's alumni and placement coordinators — they appear on the public coordinators page.") }}
+  {% endif %}
+{% endblock %}

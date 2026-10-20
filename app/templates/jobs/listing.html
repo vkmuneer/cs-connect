@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "macros.html" import job_card, pagination as pager, empty_state %}
+{% block title %}Opportunities{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Opportunities</div>
+    <div class="row between">
+      <div>
+        <h1>Opportunities</h1>
+        <p class="lede">Openings shared by our alumni and verified by the department.</p>
+      </div>
+      <a class="btn gold" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
+    </div>
+  </div>
+
+  <form class="card mb3" method="get">
+    <div class="filterbar">
+      <div class="field">{{ form.q.label }}{{ form.q(placeholder="Title, company, keyword…") }}</div>
+      <div class="field">{{ form.job_type.label }}{{ form.job_type() }}</div>
+      <div class="field">{{ form.work_mode.label }}{{ form.work_mode() }}</div>
+      <div class="field">{{ form.location.label }}{{ form.location(placeholder="e.g. Kochi") }}</div>
+      <div class="field">{{ form.skill.label }}{{ form.skill(placeholder="e.g. React") }}</div>
+      <div class="field">
+        <label class="sr-only">Apply</label>
+        <button class="btn block" type="submit">Filter</button>
+      </div>
+    </div>
+    {% if request.args %}<a class="small" href="{{ url_for('jobs.listing') }}">Clear all filters</a>{% endif %}
+  </form>
+
+  <div class="split">
+    <div>
+      <div class="row between mb2">
+        <span class="small muted">{{ pagination.total }} opportunit{{ 'y' if pagination.total == 1 else 'ies' }} listed</span>
+        {% if current_user.is_authenticated %}
+          <a class="small" href="{{ url_for('jobs.matches') }}">Matching my skills →</a>
+        {% endif %}
+      </div>
+      {% if pagination.items %}
+        <div class="grid cols-2">
+          {% for job in pagination.items %}{{ job_card(job) }}{% endfor %}
+        </div>
+        {% set qargs = request.args.to_dict() %}
+        {% set _ = qargs.pop('page', None) %}
+        {{ pager(pagination, 'jobs.listing', **qargs) }}
+      {% else %}
+        {{ empty_state("No opportunities match these filters.", "Try clearing a filter, or check back in a few days.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Skills in demand</h3>
+        {% if in_demand %}
+          <div class="chips">
+            {% for skill in in_demand %}
+              <a class="chip" href="{{ url_for('jobs.listing', skill=skill.name) }}">{{ skill.name }}</a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">No skills tagged yet.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <h3>Posting an opening</h3>
+        <ul class="small" style="padding-left:1.1rem;margin:0">
+          <li>Any verified member can post.</li>
+          <li>The department reviews every posting before it goes live.</li>
+          <li>Applications arrive with the candidate's resume attached.</li>
+        </ul>
+        <a class="btn outline block mt2" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
+      </div>
+      <div class="card">
+        <h3>Hiring alumni</h3>
+        <p class="small">Browse members who are currently recruiting.</p>
+        <a class="btn outline block" href="{{ url_for('profiles.directory', role='hiring') }}">Show hiring members</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

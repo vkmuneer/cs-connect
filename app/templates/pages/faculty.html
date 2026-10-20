@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Faculty{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Faculty</div>
+    <h1>Faculty</h1>
+    <p class="lede">The teachers of the {{ DEPARTMENT_NAME }}.</p>
+  </div>
+
+  <div class="tabs">
+    <a class="{{ 'active' if scope == 'current' }}" href="{{ url_for('main.faculty', scope='current') }}">Currently serving ({{ counts.current }})</a>
+    <a class="{{ 'active' if scope == 'former' }}" href="{{ url_for('main.faculty', scope='former') }}">Former faculty ({{ counts.former }})</a>
+  </div>
+
+  {% if members %}
+    <div class="grid cols-3">
+      {% for member in members %}
+        <div class="tile">
+          <div class="row">
+            {% if member.photo_filename %}
+              <img class="avatar" src="{{ url_for('static', filename='uploads/photos/' ~ member.photo_filename) }}" alt="{{ member.name }}">
+            {% else %}
+              <span class="avatar">{{ member.initials }}</span>
+            {% endif %}
+            <div>
+              <h3 class="mb0">{{ member.name }}</h3>
+              <div class="tiny muted">{{ member.designation }}</div>
+              {% if member.is_hod %}<span class="badge gold mt1">Head of Department</span>{% endif %}
+            </div>
+          </div>
+          {% if member.qualification %}<div class="small"><span class="muted">Qualification:</span> {{ member.qualification }}</div>{% endif %}
+          {% if member.specialization %}<div class="small"><span class="muted">Specialisation:</span> {{ member.specialization }}</div>{% endif %}
+          <div class="foot">
+            <span>{{ member.tenure }}</span>
+            {% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No records in this list yet.") }}
+  {% endif %}
+{% endblock %}

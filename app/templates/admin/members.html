@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, confirm_button, pagination as pager, empty_state %}
+{% block title %}Members{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Members</h1>
+    <p class="lede">Verify registrations, reset passwords and manage accounts.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="card mb3">
+    <form class="filterbar" method="get">
+      <div class="field">
+        <label for="q">Search</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Name or email">
+      </div>
+      <div class="field">
+        <label for="scope">Showing</label>
+        <select id="scope" name="scope">
+          {% for value, label in [('all', 'Everyone'), ('pending', 'Awaiting verification'),
+                                  ('approved', 'Verified'), ('blocked', 'Suspended'), ('admins', 'Administrators')] %}
+            <option value="{{ value }}"{{ ' selected' if scope == value else '' }}>{{ label }} ({{ counts[value] }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label class="sr-only">Apply</label>
+        <button class="btn block" type="submit">Filter</button>
+      </div>
+    </form>
+  </div>
+
+  {% if pagination.items %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Member</th><th>Programme / batch</th><th>Status</th><th>Registered</th><th>Last sign-in</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for member in pagination.items %}
+            <tr>
+              <td>
+                <div class="row">
+                  {{ avatar(member, "sm") }}
+                  <div>
+                    <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a>
+                    <div class="tiny muted">{{ member.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="small">
+                {% if member.profile %}
+                  {{ member.profile.programme }}<div class="tiny muted">Batch {{ member.profile.display_batch }}</div>
+                {% else %}<span class="muted">—</span>{% endif %}
+              </td>
+              <td>
+                {% if member.is_admin %}<span class="badge brand">Admin</span>{% endif %}
+                {% if member.is_blocked %}<span class="badge danger">Suspended</span>
+                {% elif member.is_approved %}<span class="badge ok">Verified</span>
+                {% else %}<span class="badge warn">Pending</span>{% endif %}
+              </td>
+              <td class="tiny muted nowrap">{{ member.created_at.strftime('%d %b %Y') }}</td>
+              <td class="tiny muted nowrap">{{ member.last_login_at.strftime('%d %b %Y') if member.last_login_at else '—' }}</td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  {% if not member.is_approved %}
+                    {{ confirm_button(confirm_form, url_for('admin.approve_member', user_id=member.id), 'Verify', 'btn sm ok', 'Verify this member?') }}
+                  {% endif %}
+                  <a class="btn sm outline" href="{{ url_for('admin.edit_member', user_id=member.id) }}">Edit</a>
+                  {% if member.id != current_user.id %}
+                    {{ confirm_button(confirm_form, url_for('admin.block_member', user_id=member.id),
+                                      'Reinstate' if member.is_blocked else 'Suspend', 'btn sm outline',
+                                      'Change this account’s access?') }}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {{ pager(pagination, 'admin.members', scope=scope, q=q) }}
+  {% else %}
+    {{ empty_state("No members match this view.") }}
+  {% endif %}
+{% endblock %}

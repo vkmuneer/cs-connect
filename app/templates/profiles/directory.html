@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "macros.html" import member_card, pagination as pager, empty_state %}
+{% block title %}Alumni directory{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Alumni</div>
+    <h1>Alumni directory</h1>
+    <p class="lede">
+      Every verified member of the {{ DEPARTMENT_NAME }} network — search by name,
+      batch, skill or who is hiring.
+    </p>
+  </div>
+
+  <form class="card mb3" method="get">
+    <div class="filterbar">
+      <div class="field">{{ form.q.label }}{{ form.q(placeholder="Name, company, role…") }}</div>
+      {% if MULTI_DEPARTMENT %}
+        <div class="field">{{ form.department.label }}{{ form.department() }}</div>
+      {% endif %}
+      <div class="field">{{ form.programme.label }}{{ form.programme() }}</div>
+      <div class="field">{{ form.batch_year.label }}{{ form.batch_year() }}</div>
+      <div class="field">{{ form.graduation_year.label }}{{ form.graduation_year() }}</div>
+      <div class="field">{{ form.skill.label }}{{ form.skill(placeholder="e.g. Python") }}</div>
+      <div class="field">{{ form.role.label }}{{ form.role() }}</div>
+      <div class="field">
+        <label class="sr-only">Apply</label>
+        <button class="btn block" type="submit">Filter</button>
+      </div>
+    </div>
+    {% if request.args %}
+      <a class="small" href="{{ url_for('profiles.directory') }}">Clear all filters</a>
+    {% endif %}
+  </form>
+
+  <div class="split">
+    <div>
+      <div class="row between mb2">
+        <span class="small muted">{{ pagination.total }} member{{ '' if pagination.total == 1 else 's' }} found</span>
+        <a class="small" href="{{ url_for('profiles.batches') }}">Browse by batch →</a>
+      </div>
+      {% if pagination.items %}
+        <div class="grid cols-2">
+          {% for profile in pagination.items %}{{ member_card(profile) }}{% endfor %}
+        </div>
+        {% set qargs = request.args.to_dict() %}
+        {% set _ = qargs.pop('page', None) %}
+        {{ pager(pagination, 'profiles.directory', **qargs) }}
+      {% else %}
+        {{ empty_state("No members match these filters.", "Try a broader search, or clear the filters.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Jump to a batch</h3>
+        {% if batch_years %}
+          <div class="chips">
+            {% for year, count in batch_years %}
+              <a class="chip" href="{{ url_for('profiles.batch', year=year) }}">{{ year }} · {{ count }}</a>
+            {% endfor %}
+          </div>
+          <a class="small" style="display:inline-block;margin-top:.6rem" href="{{ url_for('profiles.batches') }}">All batches with programme split →</a>
+        {% else %}
+          <p class="small muted mb0">No batches listed yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Popular skills</h3>
+        {% if popular_skills %}
+          <div class="chips">
+            {% for skill in popular_skills %}
+              <a class="chip" href="{{ url_for('profiles.directory', skill=skill.name) }}">{{ skill.name }}</a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">No skills recorded yet.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <h3>Looking to hire?</h3>
+        <p class="small">Filter for job seekers, then message a candidate directly — or post an opening on the board.</p>
+        <a class="btn outline block" href="{{ url_for('profiles.directory', role='seekers') }}">Show job seekers</a>
+        <a class="btn block mt1" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
+      </div>
+      {% if not current_user.is_authenticated %}
+        <div class="card">
+          <h3>Not listed yet?</h3>
+          <p class="small">Register with your batch details and the department will verify you.</p>
+          <a class="btn block" href="{{ url_for('auth.register') }}">Join the network</a>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

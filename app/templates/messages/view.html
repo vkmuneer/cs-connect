@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% block title %}{{ message.subject }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('messages.inbox') }}">Messages</a> / {{ message.subject }}
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h1 class="mb0">{{ message.subject }}</h1>
+          <p class="small muted mb0">
+            Conversation with
+            {% if other %}<a href="{{ url_for('profiles.view_profile', user_id=other.id) }}">{{ other.full_name }}</a>{% else %}a former member{% endif %}
+          </p>
+        </div>
+      </div>
+
+      <div class="msg-list">
+        {% for item in thread %}
+          <div class="msg-bubble {{ 'mine' if item.sender_id == current_user.id }}">
+            <div class="row between tiny muted mb1">
+              <span class="strong">{{ 'You' if item.sender_id == current_user.id else item.sender.full_name }}</span>
+              <span>{{ item.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+            </div>
+            {% if item.subject and item.subject != message.subject %}
+              <div class="small strong">{{ item.subject }}</div>
+            {% endif %}
+            <p class="mb0">{{ item.body|nl2br }}</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-actions">
+        {% if other %}
+          <a class="btn" href="{{ url_for('messages.compose', user_id=other.id) }}">Reply</a>
+        {% endif %}
+        <a class="btn outline" href="{{ url_for('messages.inbox') }}">Back to inbox</a>
+      </div>
+    </div>
+
+    <aside class="stack">
+      {% if other %}
+        <div class="card">
+          <h3>About {{ other.full_name.split()[0] }}</h3>
+          <div class="row">
+            {{ avatar(other) }}
+            <div>
+              <a href="{{ url_for('profiles.view_profile', user_id=other.id) }}">{{ other.full_name }}</a>
+              {% if other.profile %}
+                <div class="tiny muted">{{ other.profile.headline or other.profile.programme }}</div>
+                <div class="tiny muted">Batch {{ other.profile.display_batch }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <div class="card">
+        <h3>Delete this message</h3>
+        <p class="small muted">Removes it from the conversation for both of you.</p>
+        <form method="post" action="{{ url_for('messages.delete', message_id=message.id) }}" data-confirm="Delete this message?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn sm danger block" type="submit">Delete message</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

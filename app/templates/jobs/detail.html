@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, job_card, job_status_badge %}
+{% block title %}{{ job.title }} at {{ job.company }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('main.index') }}">Home</a> /
+    <a href="{{ url_for('jobs.listing') }}">Opportunities</a> / {{ job.title }}
+  </div>
+
+  <div class="card">
+    <div class="row between">
+      <div>
+        <h1 class="mb0">{{ job.title }}</h1>
+        <p class="muted mb1">
+          {{ job.company }}{% if job.location %} · {{ job.location }}{% endif %}
+          {%- if job.company_website %} · <a href="{{ job.company_website }}" target="_blank" rel="noopener">website</a>{% endif %}
+        </p>
+        <div class="chips">
+          <span class="badge brand">{{ job.job_type }}</span>
+          <span class="badge">{{ job.work_mode }}</span>
+          <span class="badge">{{ job.experience_label }}</span>
+          {% if job.vacancies and job.vacancies > 1 %}<span class="badge">{{ job.vacancies }} openings</span>{% endif %}
+          {{ job_status_badge(job) }}
+        </div>
+      </div>
+      <div class="right">
+        {% if existing_application %}
+          <span class="badge ok">Applied — {{ existing_application.status|title }}</span>
+          <div class="tiny muted mt1">on {{ existing_application.created_at.strftime('%d %b %Y') }}</div>
+        {% elif job.is_open %}
+          {% if job.accepts_portal_applications %}
+            <a class="btn gold" href="{{ url_for('jobs.apply', job_id=job.id) }}">Apply now</a>
+          {% elif job.apply_url %}
+            <a class="btn gold" href="{{ job.apply_url }}" target="_blank" rel="noopener">Apply on company site</a>
+          {% elif job.apply_email %}
+            <a class="btn gold" href="mailto:{{ job.apply_email }}?subject={{ job.title|urlencode }}">Email your application</a>
+          {% endif %}
+        {% elif job.is_expired %}
+          <span class="badge warn">Deadline passed</span>
+        {% endif %}
+        {% if can_manage %}
+          <div class="btn-group mt2">
+            <a class="btn sm outline" href="{{ url_for('jobs.edit', job_id=job.id) }}">Edit</a>
+            <a class="btn sm outline" href="{{ url_for('jobs.applicants', job_id=job.id) }}">Applicants ({{ job.applications|length }})</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if job.status == 'rejected' and can_manage and job.rejection_note %}
+    <div class="alert alert-danger mt2">
+      <span class="strong">Not approved:</span> {{ job.rejection_note }}
+      — edit the posting and submit it again.
+    </div>
+  {% endif %}
+
+  <div class="split mt3">
+    <div class="stack">
+      <div class="card prose">
+        <h2>Role summary</h2>
+        <p>{{ job.description|nl2br }}</p>
+
+        {% if job.responsibilities %}
+          <h2 class="mt3">Key responsibilities</h2>
+          <p>{{ job.responsibilities|nl2br }}</p>
+        {% endif %}
+
+        {% if job.requirements %}
+          <h2 class="mt3">Requirements</h2>
+          <p class="mb0">{{ job.requirements|nl2br }}</p>
+        {% endif %}
+      </div>
+
+      {% if job.skills %}
+        <div class="card">
+          <h2>Skills</h2>
+          <div class="chips">
+            {% for skill in job.skills %}
+              <a class="chip" href="{{ url_for('jobs.listing', skill=skill.name) }}">{{ skill.name }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if similar %}
+        <div class="card">
+          <div class="card-head"><h2>Similar opportunities</h2></div>
+          <div class="grid cols-2">
+            {% for other in similar %}{{ job_card(other) }}{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>At a glance</h3>
+        <dl class="kv">
+          <dt>Type</dt><dd>{{ job.job_type }}</dd>
+          <dt>Mode</dt><dd>{{ job.work_mode }}</dd>
+          <dt>Experience</dt><dd>{{ job.experience_label }}</dd>
+          {% if job.salary_range %}<dt>Compensation</dt><dd>{{ job.salary_range }}</dd>{% endif %}
+          {% if job.vacancies %}<dt>Openings</dt><dd>{{ job.vacancies }}</dd>{% endif %}
+          <dt>Deadline</dt><dd>{{ job.deadline.strftime('%d %B %Y') if job.deadline else 'Open until filled' }}</dd>
+          <dt>Posted</dt><dd>{{ job.created_at|timeago }}</dd>
+          <dt>Views</dt><dd>{{ job.view_count }}</dd>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3>Posted by</h3>
+        <div class="row">
+          {{ avatar(job.posted_by, "sm") }}
+          <div>
+            <a href="{{ url_for('profiles.view_profile', user_id=job.posted_by_id) }}">{{ job.posted_by.full_name }}</a>
+            {% if job.posted_by.profile %}
+              <div class="tiny muted">{{ job.posted_by.profile.programme }} · Batch {{ job.posted_by.profile.display_batch }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if current_user.is_authenticated and current_user.id != job.posted_by_id %}
+          <a class="btn outline block mt2" href="{{ url_for('messages.compose', user_id=job.posted_by_id) }}">Message the poster</a>
+        {% endif %}
+      </div>
+
+      {% if job.is_open and job.accepts_portal_applications and not existing_application %}
+        <div class="card">
+          <h3>Ready to apply?</h3>
+          <p class="small">Your profile resume is sent with the application — you can attach a different one.</p>
+          <a class="btn gold block" href="{{ url_for('jobs.apply', job_id=job.id) }}">Apply now</a>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

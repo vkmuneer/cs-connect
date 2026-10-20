@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% block title %}Announcements{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Announcements</h1>
+        <p class="lede">News, events and notices for members and visitors.</p>
+      </div>
+      <a class="btn" href="{{ url_for('admin.edit_announcement') }}">New announcement</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  {% if items %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Title</th><th>Category</th><th>Event date</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td>
+                <a href="{{ url_for('main.announcement_detail', announcement_id=item.id) }}">{{ item.title }}</a>
+                {% if item.is_pinned %}<span class="badge">Pinned</span>{% endif %}
+                <div class="tiny muted">{{ item.body|truncate(90) }}</div>
+              </td>
+              <td><span class="badge {{ 'gold' if item.category == 'Event' else 'brand' }}">{{ item.category }}</span></td>
+              <td class="small nowrap">{{ item.event_date.strftime('%d %b %Y') if item.event_date else '—' }}</td>
+              <td>{% if item.is_published %}<span class="badge ok">Published</span>{% else %}<span class="badge warn">Draft</span>{% endif %}</td>
+              <td class="tiny muted nowrap">{{ item.created_at.strftime('%d %b %Y') }}</td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  <a class="btn sm outline" href="{{ url_for('admin.edit_announcement', announcement_id=item.id) }}">Edit</a>
+                  {{ confirm_button(confirm_form, url_for('admin.delete_announcement', announcement_id=item.id), 'Delete', 'btn sm danger', 'Delete this announcement?') }}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ empty_state("No announcements yet.", "Post the next alumni meet or a recruitment notice.") }}
+  {% endif %}
+{% endblock %}

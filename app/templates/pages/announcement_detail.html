@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('main.announcements') }}">News &amp; events</a> / {{ item.category }}
+    </div>
+    <h1>{{ item.title }}</h1>
+    <p class="lede">
+      <span class="badge {{ 'gold' if item.category == 'Event' else 'brand' }}">{{ item.category }}</span>
+      Published {{ item.created_at.strftime('%d %B %Y') }}
+      {%- if item.author %} by {{ item.author.full_name }}{% endif %}
+    </p>
+  </div>
+
+  <div class="split">
+    <article class="card prose">
+      {% if item.event_date %}
+        <p class="strong">Event date: {{ item.event_date.strftime('%A, %d %B %Y') }}</p>
+      {% endif %}
+      <p>{{ item.body|nl2br }}</p>
+    </article>
+    <aside class="card">
+      <h3>Stay in the loop</h3>
+      <p class="small">Members get portal notifications for department announcements.</p>
+      {% if current_user.is_authenticated %}
+        <a class="btn outline block" href="{{ url_for('messages.inbox') }}">Open my messages</a>
+      {% else %}
+        <a class="btn block" href="{{ url_for('auth.register') }}">Join the network</a>
+      {% endif %}
+      <a class="btn outline block mt1" href="{{ url_for('main.announcements') }}">All announcements</a>
+    </aside>
+  </div>
+{% endblock %}

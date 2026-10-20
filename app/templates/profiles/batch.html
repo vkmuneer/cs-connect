@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "macros.html" import member_card, empty_state %}
+{% block title %}Batch of {{ year }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('profiles.directory') }}">Alumni</a> /
+      <a href="{{ url_for('profiles.batches') }}">Batches</a> / {{ year }}
+    </div>
+    <h1>Batch of {{ year }}</h1>
+    <p class="lede">
+      Members admitted in {{ year }}
+      {%- if programme %} to {{ programme }}{% endif %} — {{ members|length }} in all.
+    </p>
+  </div>
+
+  <div class="tabs">
+    <a class="{{ 'active' if not programme }}" href="{{ url_for('profiles.batch', year=year, department=department_id) }}">
+      All programmes ({{ members|length if not programme else spread.values()|sum }})
+    </a>
+    {% for prog in programmes %}
+      <a class="{{ 'active' if programme == prog }}" href="{{ url_for('profiles.batch', year=year, programme=prog, department=department_id) }}">{{ prog }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="split">
+    <div>
+      {% if members %}
+        <div class="grid cols-2">
+          {% for profile in members %}{{ member_card(profile) }}{% endfor %}
+        </div>
+      {% else %}
+        {{ empty_state("No members listed for this batch yet.",
+                       "Try another year, or clear the programme filter.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>This batch</h3>
+        <dl class="kv">
+          <dt>Year of admission</dt><dd>{{ year }}</dd>
+          <dt>Members listed</dt><dd>{{ members|length }}</dd>
+          <dt>Placed via portal</dt><dd>{{ placements|length }}</dd>
+        </dl>
+        {% if spread %}
+          <h4 class="mt2">By programme</h4>
+          <ul class="list-plain small">
+            {% for prog, count in spread.items() %}
+              <li class="row between"><span>{{ prog }}</span><span class="badge">{{ count }}</span></li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+
+      {% if placements %}
+        <div class="card">
+          <h3>Hired through the portal</h3>
+          <ul class="list-plain small">
+            {% for row in placements %}
+              <li>
+                <span class="strong">{{ row.applicant.full_name }}</span>
+                <div class="tiny muted">{{ row.job.title }} · {{ row.job.company }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+          <a class="small" href="{{ url_for('main.placements') }}">All placements →</a>
+        </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>Other batches</h3>
+        <div class="chips">
+          {% for y in all_years %}
+            <a class="chip {{ 'active' if y == year }}" href="{{ url_for('profiles.batch', year=y) }}">{{ y }}</a>
+          {% endfor %}
+        </div>
+        <a class="btn outline block mt2" href="{{ url_for('profiles.batches') }}">All batches</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

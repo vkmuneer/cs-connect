@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% block title %}Faculty records{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Faculty records</h1>
+        <p class="lede">The list shown on the public faculty page.</p>
+      </div>
+      <a class="btn" href="{{ url_for('admin.edit_faculty') }}">Add faculty</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  {% if members %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Name</th><th>Designation</th><th>Specialisation</th><th>Tenure</th><th>Status</th><th>Order</th><th></th></tr></thead>
+        <tbody>
+          {% for member in members %}
+            <tr>
+              <td>
+                <div class="row">
+                  {% if member.photo_filename %}
+                    <img class="avatar sm" src="{{ url_for('static', filename='uploads/photos/' ~ member.photo_filename) }}" alt="">
+                  {% else %}
+                    <span class="avatar sm">{{ member.initials }}</span>
+                  {% endif %}
+                  <div>
+                    <span class="strong">{{ member.name }}</span>
+                    {% if member.email %}<div class="tiny muted">{{ member.email }}</div>{% endif %}
+                  </div>
+                </div>
+              </td>
+              <td class="small">{{ member.designation or '—' }}{% if member.is_hod %}<div><span class="badge gold">HoD</span></div>{% endif %}</td>
+              <td class="small">{{ member.specialization or '—' }}</td>
+              <td class="small nowrap">{{ member.tenure or '—' }}</td>
+              <td>{% if member.is_current %}<span class="badge ok">Serving</span>{% else %}<span class="badge">Former</span>{% endif %}</td>
+              <td class="small">{{ member.sort_order }}</td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  <a class="btn sm outline" href="{{ url_for('admin.edit_faculty', faculty_id=member.id) }}">Edit</a>
+                  {{ confirm_button(confirm_form, url_for('admin.delete_faculty', faculty_id=member.id), 'Delete', 'btn sm danger', 'Remove this faculty record?') }}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ empty_state("No faculty records yet.", "Add the current teachers so they appear on the public page.") }}
+  {% endif %}
+{% endblock %}

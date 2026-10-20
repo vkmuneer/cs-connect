@@ -1,0 +1,19 @@
+<div class="tabs">
+  {% set ep = request.endpoint %}
+  <a class="{{ 'active' if ep == 'admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">Overview</a>
+  <a class="{{ 'active' if ep in ('admin.members', 'admin.edit_member') }}" href="{{ url_for('admin.members') }}">
+    Members{% if pending_users_count %} <span class="badge warn">{{ pending_users_count }}</span>{% endif %}
+  </a>
+  <a class="{{ 'active' if ep == 'admin.jobs' }}" href="{{ url_for('admin.jobs') }}">
+    Postings{% if pending_jobs_count %} <span class="badge warn">{{ pending_jobs_count }}</span>{% endif %}
+  </a>
+  <a class="{{ 'active' if ep == 'admin.placements' }}" href="{{ url_for('admin.placements') }}">Placements</a>
+  <a class="{{ 'active' if ep in ('admin.faculty', 'admin.edit_faculty') }}" href="{{ url_for('admin.faculty') }}">Faculty</a>
+  <a class="{{ 'active' if ep in ('admin.coordinators', 'admin.edit_coordinator') }}" href="{{ url_for('admin.coordinators') }}">Coordinators</a>
+  <a class="{{ 'active' if ep in ('admin.departments', 'admin.edit_department') }}" href="{{ url_for('admin.departments') }}">
+    Departments{% if not MULTI_DEPARTMENT %} <span class="badge">off</span>{% endif %}
+  </a>
+  <a class="{{ 'active' if ep in ('admin.announcements', 'admin.edit_announcement') }}" href="{{ url_for('admin.announcements') }}">Announcements</a>
+  <a class="{{ 'active' if ep in ('admin.pages', 'admin.edit_page') }}" href="{{ url_for('admin.pages') }}">Pages</a>
+  <a class="{{ 'active' if ep == 'admin.logs' }}" href="{{ url_for('admin.logs') }}">Activity log</a>
+</div>

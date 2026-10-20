@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Placements{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Placements</h1>
+        <p class="lede">Offers accepted through the portal, and the applications still in play.</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('main.placements') }}">View the public page</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="statstrip mb3">
+    <div><div class="n">{{ stats.total }}</div><div class="l">Placed</div></div>
+    <div><div class="n">{{ stats.members }}</div><div class="l">Members</div></div>
+    <div><div class="n">{{ stats.companies }}</div><div class="l">Companies</div></div>
+    <div><div class="n">{{ stats.this_year }}</div><div class="l">This year</div></div>
+    <div><div class="n">{{ in_progress|length }}</div><div class="l">In progress</div></div>
+  </div>
+
+  <div class="card mb3">
+    <div class="card-head"><h2>Hired through the portal</h2></div>
+    {% if placements %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Member</th><th>Role</th><th>Company</th><th>Posted by</th><th>Batch</th><th>Marked</th></tr></thead>
+          <tbody>
+            {% for row in placements %}
+              <tr>
+                <td>
+                  <div class="row">
+                    {{ avatar(row.applicant, "sm") }}
+                    <a href="{{ url_for('profiles.view_profile', user_id=row.applicant_id) }}">{{ row.applicant.full_name }}</a>
+                  </div>
+                </td>
+                <td><a href="{{ url_for('jobs.detail', job_id=row.job_id) }}">{{ row.job.title }}</a></td>
+                <td class="small">{{ row.job.company }}</td>
+                <td class="small">{{ row.job.posted_by.full_name }}</td>
+                <td class="small">{{ row.applicant.profile.display_batch if row.applicant.profile else '—' }}</td>
+                <td class="tiny muted nowrap">{{ row.placed_on.strftime('%d %b %Y') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("No placements recorded yet.",
+                     "An employer marking an application “Hired” adds it here and to the public page.") }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Shortlisted &amp; interviewing</h2></div>
+    {% if in_progress %}
+      <ul class="list-plain">
+        {% for row in in_progress %}
+          <li class="row between">
+            <div>
+              <a href="{{ url_for('profiles.view_profile', user_id=row.applicant_id) }}">{{ row.applicant.full_name }}</a>
+              <div class="tiny muted">{{ row.job.title }} · {{ row.job.company }}</div>
+            </div>
+            <div class="right">
+              <span class="badge info">{{ row.status|title }}</span>
+              <div class="tiny muted mt1">{{ row.placed_on|timeago }}</div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="small muted mb0">No applications are mid-process right now.</p>
+    {% endif %}
+  </div>
+{% endblock %}

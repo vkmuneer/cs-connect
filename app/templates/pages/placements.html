@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Placements through the portal{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Placements</div>
+    <h1>Hired through {{ SITE_NAME }}</h1>
+    <p class="lede">
+      Every offer on this page started as a posting by one of our own alumni and an
+      application made here on the portal.
+    </p>
+  </div>
+
+  <section class="statstrip mb3">
+    <div><div class="n">{{ stats.total }}</div><div class="l">Offers accepted</div></div>
+    <div><div class="n">{{ stats.members }}</div><div class="l">Members placed</div></div>
+    <div><div class="n">{{ stats.companies }}</div><div class="l">Companies</div></div>
+    <div><div class="n">{{ stats.this_year }}</div><div class="l">This year</div></div>
+    <div><div class="n">{{ by_batch|length }}</div><div class="l">Batches represented</div></div>
+  </section>
+
+  <div class="split">
+    <div>
+      {% if placements %}
+        <div class="stack">
+          {% for row in placements %}
+            {% set profile = row.applicant.profile %}
+            <div class="card placement">
+              <div class="row between">
+                <div class="row">
+                  {{ avatar(row.applicant) }}
+                  <div>
+                    <div class="strong">
+                      {% if profile and profile.is_visible and row.applicant.is_approved %}
+                        <a href="{{ url_for('profiles.view_profile', user_id=row.applicant_id) }}">{{ row.applicant.full_name }}</a>
+                      {% else %}
+                        {{ row.applicant.full_name }}
+                      {% endif %}
+                    </div>
+                    <div class="small">
+                      {{ row.job.title }} · <span class="strong">{{ row.job.company }}</span>
+                    </div>
+                    {% if profile %}
+                      <div class="tiny muted">
+                        {{ profile.programme }} · Batch {{ profile.display_batch }}
+                        {%- if profile.location %} · {{ profile.location }}{% endif %}
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="right">
+                  <span class="badge gold">Placed via {{ SITE_NAME }}</span>
+                  <div class="tiny muted mt1">{{ row.placed_on.strftime('%B %Y') }}</div>
+                </div>
+              </div>
+              <div class="chips mt2">
+                <span class="badge">{{ row.job.job_type }}</span>
+                <span class="badge">{{ row.job.work_mode }}</span>
+                {% if row.job.location %}<span class="badge">{{ row.job.location }}</span>{% endif %}
+                <a class="chip" href="{{ url_for('jobs.detail', job_id=row.job_id) }}">View the posting</a>
+                <span class="chip">Referred by {{ row.job.posted_by.full_name }}</span>
+              </div>
+              {% if row.employer_note %}
+                <p class="small muted mt2 mb0">“{{ row.employer_note }}”</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        {{ empty_state("No placements recorded yet.",
+                       "A placement is counted when an employer marks an application as hired.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Recruiting companies</h3>
+        {% if by_company %}
+          <ul class="list-plain small">
+            {% for company, count in by_company %}
+              <li class="row between"><span>{{ company }}</span><span class="badge brand">{{ count }}</span></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted mb0">Nothing yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>By programme</h3>
+        {% if by_programme %}
+          <ul class="list-plain small">
+            {% for programme, count in by_programme %}
+              <li class="row between"><span>{{ programme }}</span><span class="badge">{{ count }}</span></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted mb0">Nothing yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>By batch</h3>
+        {% if by_batch %}
+          <div class="chips">
+            {% for year, count in by_batch %}
+              <a class="chip" href="{{ url_for('profiles.batch', year=year) }}">{{ year }} · {{ count }}</a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">Nothing yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>How a placement is counted</h3>
+        <p class="small mb0">
+          The employer who posted the role marks the application <span class="strong">Hired</span>
+          on their applicants list. That one action notifies the candidate and adds the
+          offer to this page — nothing is entered by hand.
+        </p>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

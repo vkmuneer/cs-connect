@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+  <div class="auth-wrap">
+    <div class="card">
+      <h1 class="mb1">Sign in</h1>
+      <p class="small muted">Use the email address you registered with.</p>
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.email, placeholder="you@example.com", autofocus=True) }}
+        {{ field(form.password) }}
+        {{ check(form.remember) }}
+        <div class="form-actions">
+          <button class="btn" type="submit">Sign in</button>
+          <a class="small" href="{{ url_for('auth.register') }}">Create an account</a>
+        </div>
+      </form>
+    </div>
+    <p class="small muted center mt2">
+      Forgot your password? Write to <a href="mailto:cs@sscollege.ac.in">cs@sscollege.ac.in</a>
+      and the department will reset it for you.
+    </p>
+  </div>
+{% endblock %}

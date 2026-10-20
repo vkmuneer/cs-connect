@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button %}
+{% block title %}Departments{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Departments</h1>
+        <p class="lede">Open the portal beyond Computer Science, one department at a time.</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('admin.edit_department') }}">Add department</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="card mb3 {{ 'feature-on' if enabled else 'feature-off' }}">
+    <div class="row between">
+      <div style="max-width:70ch">
+        <h2 class="mb1">
+          College-wide mode
+          {% if enabled %}<span class="badge ok">On</span>{% else %}<span class="badge">Off</span>{% endif %}
+        </h2>
+        <p class="small mb0">
+          While this is off, {{ SITE_NAME }} behaves exactly as it does today: a portal for
+          the {{ DEPARTMENT_NAME }} alone. Switching it on reveals the department selector on
+          registration and in the directory, publishes the departments page, and lets each
+          department keep its own coordinators. Nothing already recorded changes, and you can
+          switch it back off at any time.
+        </p>
+      </div>
+      <form method="post">
+        {{ toggle_form.hidden_tag() }}
+        <div class="check">
+          {{ toggle_form.enabled() }}
+          {{ toggle_form.enabled.label }}
+        </div>
+        <button class="btn {{ 'outline' if enabled else '' }}" type="submit">
+          {{ 'Save setting' if enabled else 'Turn on' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if not enabled %}
+    <div class="alert alert-info">
+      Departments activated below stay hidden from members until college-wide mode is on.
+      Set them up now, switch the mode on when the college is ready.
+    </div>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr><th>Department</th><th>Programmes</th><th>Members</th><th>Coordinators</th><th>State</th><th>Order</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for dept in departments %}
+          <tr>
+            <td>
+              <span class="strong">{{ dept.name }}</span>
+              {% if dept.is_primary %}<span class="badge gold">Host</span>{% endif %}
+              {% if dept.short_name %}<div class="tiny muted">{{ dept.short_name }}</div>{% endif %}
+            </td>
+            <td class="small">
+              {% if dept.programme_list %}
+                {{ dept.programme_list|join(', ') }}
+              {% else %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td>{{ dept.member_count }}</td>
+            <td>{{ dept.coordinators|length }}</td>
+            <td>
+              {% if dept.is_active %}<span class="badge ok">Active</span>
+              {% else %}<span class="badge">Disabled</span>{% endif %}
+            </td>
+            <td class="small">{{ dept.sort_order }}</td>
+            <td class="nowrap">
+              <div class="btn-group">
+                <a class="btn sm outline" href="{{ url_for('admin.edit_department', department_id=dept.id) }}">Edit</a>
+                {% if not (dept.is_primary and dept.is_active) %}
+                  {{ confirm_button(confirm_form, url_for('admin.toggle_department', department_id=dept.id),
+                                    'Deactivate' if dept.is_active else 'Activate',
+                                    'btn sm ' ~ ('outline' if dept.is_active else 'ok'),
+                                    'Change the state of this department?') }}
+                {% endif %}
+                {% if not dept.is_primary and not dept.member_count %}
+                  {{ confirm_button(confirm_form, url_for('admin.delete_department', department_id=dept.id),
+                                    'Delete', 'btn sm danger', 'Delete this department?') }}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card mt3">
+    <h3>What activating a department does</h3>
+    <ul class="small" style="padding-left:1.1rem;margin:0">
+      <li>Its alumni can pick it when registering, and its programmes become their programme choices.</li>
+      <li>The directory, batch browser and coordinator pages gain a department filter.</li>
+      <li>Jobs, messages and placements stay college-wide — a posting from any department reaches everyone.</li>
+      <li>Deactivating it hides the department from new registrations; existing members keep their records.</li>
+    </ul>
+  </div>
+{% endblock %}

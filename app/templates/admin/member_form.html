@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check, avatar, confirm_button %}
+{% block title %}Manage {{ member.full_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Manage member</h1>
+    <p class="lede">Account settings for {{ member.full_name }}.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="split">
+    <div class="card">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.full_name) }}
+        {{ field(form.email) }}
+        {{ field(form.role) }}
+        {{ check(form.is_approved) }}
+        {{ check(form.is_blocked) }}
+        {{ field(form.new_password) }}
+        <p class="hint">Leave the password blank to keep the current one.</p>
+        <div class="form-actions">
+          <button class="btn" type="submit">Save changes</button>
+          <a class="btn outline" href="{{ url_for('admin.members') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="card center">
+        {{ avatar(member, "lg") }}
+        <h3 class="mt2 mb0">{{ member.full_name }}</h3>
+        <p class="small muted">{{ member.email }}</p>
+        <a class="btn outline block" href="{{ url_for('profiles.view_profile', user_id=member.id) }}">View profile</a>
+      </div>
+      <div class="card">
+        <h3>Account</h3>
+        <dl class="kv">
+          <dt>Registered</dt><dd>{{ member.created_at.strftime('%d %b %Y') }}</dd>
+          <dt>Last sign-in</dt><dd>{{ member.last_login_at.strftime('%d %b %Y, %H:%M') if member.last_login_at else 'Never' }}</dd>
+          <dt>Postings</dt><dd>{{ member.jobs_posted|length }}</dd>
+          <dt>Applications</dt><dd>{{ member.applications|length }}</dd>
+        </dl>
+      </div>
+      {% if member.id != current_user.id %}
+        <div class="card">
+          <h3>Delete account</h3>
+          <p class="small muted">
+            Removes the profile, postings, applications and messages. This cannot be undone.
+          </p>
+          <form method="post" action="{{ url_for('admin.delete_member', user_id=member.id) }}"
+                data-confirm="Permanently delete {{ member.full_name }} and everything they posted?">
+            {{ form.csrf_token }}
+            <button class="btn danger block" type="submit">Delete this member</button>
+          </form>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

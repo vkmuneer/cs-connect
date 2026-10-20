@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check, file_field %}
+{% block title %}{{ 'Edit coordinator' if coordinator else 'Add coordinator' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit coordinator' if coordinator else 'Add a coordinator' }}</h1>
+    <p class="lede">Recorded against one department and one academic year.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        <div class="grid cols-2">
+          {{ field(form.department) }}
+          {{ field(form.academic_year, placeholder="2026-27") }}
+        </div>
+        {{ field(form.name) }}
+        <div class="grid cols-2">
+          {{ field(form.role) }}
+          {{ field(form.designation) }}
+        </div>
+        <div class="grid cols-2">
+          {{ field(form.email) }}
+          {{ field(form.phone) }}
+        </div>
+        {{ field(form.notes, placeholder="What this coordinator looks after") }}
+        <p class="hint">
+          If the email matches a portal account, the public listing links to that member's profile.
+        </p>
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {% if coordinator and coordinator.photo_filename %}
+            <img class="avatar lg mb2" src="{{ url_for('static', filename='uploads/photos/' ~ coordinator.photo_filename) }}" alt="">
+          {% endif %}
+          {{ file_field(form.photo, "PNG, JPG or WebP.") }}
+          {{ check(form.is_active) }}
+          {{ field(form.sort_order) }}
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save coordinator</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.coordinators') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

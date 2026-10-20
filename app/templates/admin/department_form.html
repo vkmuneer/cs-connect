@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}{{ 'Edit department' if department else 'Add department' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit department' if department else 'Add a department' }}</h1>
+    <p class="lede">Programmes listed here become the choices alumni see when registering.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.name, placeholder="e.g. Physics") }}
+        {{ field(form.short_name, placeholder="e.g. PHY") }}
+        {{ field(form.description) }}
+        {{ field(form.programmes, placeholder="B.Sc Physics&#10;M.Sc Physics") }}
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {{ field(form.email) }}
+          {{ field(form.website, placeholder="https://") }}
+          {{ field(form.sort_order) }}
+          {{ check(form.is_active) }}
+          {% if department and department.is_primary %}
+            <p class="hint mb0">This is the host department — it stays active.</p>
+          {% endif %}
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save department</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.departments') }}">Cancel</a>
+        </div>
+        {% if department %}
+          <div class="card">
+            <h3>Currently</h3>
+            <dl class="kv">
+              <dt>Members</dt><dd>{{ department.member_count }}</dd>
+              <dt>Coordinators</dt><dd>{{ department.coordinators|length }}</dd>
+              <dt>State</dt><dd>{{ 'Active' if department.is_active else 'Disabled' }}</dd>
+            </dl>
+          </div>
+        {% endif %}
+      </aside>
+    </div>
+  </form>
+{% endblock %}

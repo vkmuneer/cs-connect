@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% from "macros.html" import job_card, member_card, empty_state %}
+{% block title %}Alumni network of the Department of Computer Science{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div>
+      <h1>Where our graduates stay in touch — and hire each other</h1>
+      <p>
+        {{ SITE_NAME }} is the alumni network of the {{ DEPARTMENT_NAME }} at
+        {{ COLLEGE_NAME }}, {{ COLLEGE_PLACE }}. Find a batchmate, list an opening for
+        the juniors, mentor a final-year project, or take the next step in your own career.
+      </p>
+      <div class="cta">
+        {% if current_user.is_authenticated %}
+          <a class="btn light" href="{{ url_for('profiles.my_profile') }}">Go to my dashboard</a>
+          <a class="btn gold" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
+        {% else %}
+          <a class="btn light" href="{{ url_for('auth.register') }}">Join the network</a>
+          <a class="btn gold" href="{{ url_for('jobs.listing') }}">Browse opportunities</a>
+        {% endif %}
+        <a class="btn outline" style="border-color:rgba(255,255,255,.4);color:#eaf4ef" href="{{ url_for('profiles.directory') }}">Alumni directory</a>
+      </div>
+    </div>
+    <img class="emblem" src="{{ url_for('static', filename='img/college-emblem.png') }}" alt="">
+  </section>
+
+  <section class="statstrip mt3">
+    <div><div class="n">{{ stats.alumni }}</div><div class="l">Members</div></div>
+    <div><div class="n">{{ stats.batches }}</div><div class="l">Batches</div></div>
+    <div><div class="n">{{ stats.jobs }}</div><div class="l">Open roles</div></div>
+    <div><div class="n">{{ stats.placements }}</div><div class="l">Placed via portal</div></div>
+    <div><div class="n">{{ stats.providers }}</div><div class="l">Job providers</div></div>
+  </section>
+
+  <div class="split mt3">
+    <div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Latest opportunities</h2>
+          <a class="small" href="{{ url_for('jobs.listing') }}">View the full job board →</a>
+        </div>
+        {% if latest_jobs %}
+          <div class="grid cols-2">
+            {% for job in latest_jobs %}{{ job_card(job) }}{% endfor %}
+          </div>
+        {% else %}
+          {{ empty_state("No openings listed yet.", "Alumni postings appear here once the department approves them.") }}
+        {% endif %}
+      </div>
+
+      {% if placements %}
+        <div class="card mt3 placement-highlight">
+          <div class="card-head">
+            <h2>Hired through {{ SITE_NAME }}</h2>
+            <a class="small" href="{{ url_for('main.placements') }}">All {{ stats.placements }} placements →</a>
+          </div>
+          <p class="small muted">
+            Offers that began as a posting from one of our own alumni — the clearest
+            measure of what this network is for.
+          </p>
+          <div class="grid cols-2">
+            {% for row in placements %}
+              <div class="tile placement">
+                <div class="row between">
+                  <div>
+                    <div class="strong">{{ row.applicant.full_name }}</div>
+                    <div class="small">{{ row.job.title }}</div>
+                    <div class="tiny muted">{{ row.job.company }}</div>
+                  </div>
+                  <span class="badge gold nowrap">Placed</span>
+                </div>
+                <div class="foot">
+                  <span>{% if row.applicant.profile %}Batch {{ row.applicant.profile.display_batch }}{% endif %}</span>
+                  <span>{{ row.placed_on.strftime('%b %Y') }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="card mt3">
+        <div class="card-head">
+          <h2>Members of the network</h2>
+          <a class="small" href="{{ url_for('profiles.directory') }}">Browse the directory →</a>
+        </div>
+        {% if featured_alumni %}
+          <div class="grid cols-2">
+            {% for profile in featured_alumni %}{{ member_card(profile) }}{% endfor %}
+          </div>
+        {% else %}
+          {{ empty_state("The directory is still being built.", "Register and complete your profile to be among the first.") }}
+        {% endif %}
+      </div>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <div class="card-head"><h3>News &amp; events</h3></div>
+        {% if announcements %}
+          <ul class="list-plain">
+            {% for item in announcements %}
+              <li>
+                <div class="tiny muted">
+                  <span class="badge {{ 'gold' if item.category == 'Event' else 'brand' }}">{{ item.category }}</span>
+                  {{ item.created_at|timeago }}
+                </div>
+                <div class="mt1"><a href="{{ url_for('main.announcement_detail', announcement_id=item.id) }}">{{ item.title }}</a></div>
+                {% if item.event_date %}<div class="tiny muted">On {{ item.event_date.strftime('%d %B %Y') }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+          <a class="small" href="{{ url_for('main.announcements') }}">All announcements →</a>
+        {% else %}
+          <p class="small muted mb0">Nothing announced at the moment.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Find your batch</h3></div>
+        <p class="small">
+          {{ stats.batches }} batches are listed, from the first to the current year.
+          Browse by year of admission and programme.
+        </p>
+        <a class="btn outline block" href="{{ url_for('profiles.batches') }}">Browse by batch</a>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>How the portal works</h3></div>
+        <ul class="timeline">
+          <li><span class="strong">Register</span> with your batch and programme — the department verifies that you studied here.</li>
+          <li><span class="strong">Build your profile</span> with your skills, experience and resume.</li>
+          <li><span class="strong">Job providers</span> post openings; the department approves them before they go live.</li>
+          <li><span class="strong">Job seekers</span> apply in one click, and the employer gets the resume with the application.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>For the department</h3></div>
+        <p class="small">
+          Hosted by the {{ DEPARTMENT_NAME }}, the portal doubles as a placement
+          register: every posting, application and verification is recorded.
+        </p>
+        <a class="btn outline block" href="{{ url_for('main.about_department') }}">About the department</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

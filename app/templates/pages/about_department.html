@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Department</div>
+    <h1>{{ page.title }}</h1>
+    <p class="lede">{{ COLLEGE_NAME }}, {{ COLLEGE_PLACE }}</p>
+  </div>
+
+  <div class="split">
+    <div>
+      <div class="card prose">
+        {% if page.body %}
+          <p>{{ page.body|nl2br }}</p>
+        {% else %}
+          <p class="muted">This page has not been filled in yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card mt3">
+        <div class="card-head"><h2>Programmes offered</h2></div>
+        <div class="stack">
+          {% for slug, prog in [('programme-bsc', 'B.Sc Computer Science'),
+                                ('programme-msc', 'M.Sc Computer Science'),
+                                ('programme-phd', 'Ph.D Computer Science')] %}
+            {% set content = programme_pages[slug] %}
+            <div class="card tight flat">
+              <h3>{{ content.title or prog }}</h3>
+              <p class="small mb0">{{ content.body|nl2br if content.body else "Details to follow." }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Alumni by batch</h3>
+        {% if batch_spread %}
+          {% set peak = batch_spread|map(attribute=1)|max %}
+          <div class="stack">
+            {% for year, count in batch_spread|reverse %}
+              <div>
+                <div class="row between tiny"><span>{{ year }}</span><span class="muted">{{ count }}</span></div>
+                <div class="bar"><span style="width: {{ (count / peak * 100)|round }}%"></span></div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">No verified members yet.</p>
+        {% endif %}
+      </div>
+      <div class="card">
+        <h3>Faculty</h3>
+        <p class="small">Meet the teachers who run the department, past and present.</p>
+        <a class="btn outline block" href="{{ url_for('main.faculty') }}">Faculty list</a>
+      </div>
+      <div class="card">
+        <h3>Join the network</h3>
+        <p class="small">Studied here? Register and get listed in the alumni directory.</p>
+        <a class="btn block" href="{{ url_for('auth.register') }}">Register</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}
