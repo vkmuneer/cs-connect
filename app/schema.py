@@ -12,6 +12,11 @@ from app.extensions import db
 ADDED_COLUMNS = {
     "profiles": {
         "department_id": "INTEGER REFERENCES departments(id)",
+        "is_featured": "BOOLEAN NOT NULL DEFAULT 0",
+        "featured_title": "VARCHAR(160)",
+        "featured_note": "TEXT",
+        "featured_order": "INTEGER NOT NULL DEFAULT 100",
+        "featured_at": "DATETIME",
     },
 }
 

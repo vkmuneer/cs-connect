@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, confirm_button, empty_state %}
+{% block title %}Prominent alumni{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Prominent alumni</h1>
+        <p class="lede">Choose which registered members the portal puts forward, and why.</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('profiles.prominent') }}">View the public page</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="card mb3">
+    <div class="card-head">
+      <h2>Currently highlighted</h2>
+      <span class="small muted">{{ featured|length }} member{{ '' if featured|length == 1 else 's' }}</span>
+    </div>
+    {% if featured %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr><th>Member</th><th>Recognition</th><th>Citation</th><th>Batch</th><th>Order</th><th>State</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for profile in featured %}
+              {% set member = profile.user %}
+              <tr>
+                <td>
+                  <div class="row">
+                    {{ avatar(member, "sm") }}
+                    <div>
+                      <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a>
+                      <div class="tiny muted">{{ member.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="small">{{ profile.featured_title or '—' }}</td>
+                <td class="small">{{ profile.featured_note|truncate(90) if profile.featured_note else '—' }}</td>
+                <td class="small nowrap">{{ profile.display_batch }}</td>
+                <td class="small">{{ profile.featured_order }}</td>
+                <td>
+                  {% if not member.is_approved %}<span class="badge warn">Unverified</span>
+                  {% elif member.is_blocked %}<span class="badge danger">Suspended</span>
+                  {% elif not profile.is_visible %}<span class="badge warn">Unlisted</span>
+                  {% else %}<span class="badge ok">Showing</span>{% endif %}
+                </td>
+                <td class="nowrap">
+                  <div class="btn-group">
+                    <a class="btn sm outline" href="{{ url_for('admin.highlight_member', user_id=member.id) }}">Edit</a>
+                    {{ confirm_button(confirm_form, url_for('admin.unhighlight_member', user_id=member.id),
+                                      'Remove', 'btn sm danger', 'Remove this alumnus from the page?') }}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="hint mt2 mb0">
+        A highlighted member who is unverified, suspended or unlisted stays on this
+        table but is hidden from the public page.
+      </p>
+    {% else %}
+      {{ empty_state("Nobody is highlighted yet.",
+                     "Pick a member below, or use the Highlight button on any member's row.") }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Members you might put forward</h2>
+      <a class="small" href="{{ url_for('admin.members') }}">Search all members →</a>
+    </div>
+    {% if suggestions %}
+      <div class="grid cols-2">
+        {% for profile in suggestions %}
+          {% set member = profile.user %}
+          <div class="tile member-card">
+            {{ avatar(member) }}
+            <div class="body">
+              <div class="name">{{ member.full_name }}</div>
+              <div class="small muted">{{ profile.headline or profile.current_position or profile.programme }}</div>
+              <div class="tiny muted mt1">
+                Batch {{ profile.display_batch }}
+                {%- if profile.experience_years %} · {{ profile.experience_years|round(1) }} yrs{% endif %}
+                {%- if profile.current_company %} · {{ profile.current_company }}{% endif %}
+              </div>
+              <a class="btn sm mt1" href="{{ url_for('admin.highlight_member', user_id=member.id) }}">Highlight</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="hint mt2 mb0">
+        Ordered by recorded experience — a starting point, not a ranking.
+      </p>
+    {% else %}
+      <p class="small muted mb0">No other listed members to suggest.</p>
+    {% endif %}
+  </div>
+{% endblock %}

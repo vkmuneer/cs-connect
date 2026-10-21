@@ -361,6 +361,23 @@ class CoordinatorForm(FlaskForm):
     submit = SubmitField("Save coordinator")
 
 
+class FeatureAlumnusForm(FlaskForm):
+    """Put a registered member forward as a prominent alumnus."""
+    featured_title = StringField(
+        "Recognition", validators=[Optional(), Length(max=160)],
+        description="e.g. Distinguished Alumnus 2026, or Industry Leader",
+    )
+    featured_note = TextAreaField(
+        "Citation", validators=[Optional(), Length(max=2000)],
+        description="A sentence or two on why this alumnus is being highlighted.",
+    )
+    featured_order = IntegerField(
+        "Display order", default=100, validators=[Optional(), NumberRange(min=0, max=999)],
+    )
+    is_featured = BooleanField("Show on the prominent alumni page", default=True)
+    submit = SubmitField("Save")
+
+
 class PortalSettingsForm(FlaskForm):
     """Which years of admission the portal offers."""
     first_batch_year = IntegerField(

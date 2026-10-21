@@ -183,6 +183,15 @@ class Profile(db.Model):
     designation_at_company = db.Column(db.String(120))
 
     is_visible = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Curated by an administrator: who the department puts forward as a
+    # prominent alumnus, and why.
+    is_featured = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    featured_title = db.Column(db.String(160))   # e.g. "Distinguished Alumnus 2026"
+    featured_note = db.Column(db.Text)           # the citation shown on the card
+    featured_order = db.Column(db.Integer, default=100, nullable=False)
+    featured_at = db.Column(db.DateTime)
+
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     user = db.relationship("User", back_populates="profile")
@@ -201,6 +210,20 @@ class Profile(db.Model):
     def initials(self):
         parts = [p for p in (self.user.full_name or "").split() if p]
         return "".join(p[0].upper() for p in parts[:2]) or "?"
+
+    @classmethod
+    def featured_query(cls):
+        """Prominent alumni who are still verified, listed and unsuspended."""
+        return (
+            cls.query.join(User)
+            .filter(
+                cls.is_featured.is_(True),
+                cls.is_visible.is_(True),
+                User.is_approved.is_(True),
+                User.is_blocked.is_(False),
+            )
+            .order_by(cls.featured_order, cls.featured_at.desc().nullslast())
+        )
 
     @property
     def department_name(self):

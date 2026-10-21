@@ -30,7 +30,10 @@
           </div>
         </div>
         <div class="chips">
-          {% if profile.placements %}<span class="badge gold">Placed via {{ SITE_NAME }}</span>{% endif %}
+          {% if profile.is_featured %}
+            <span class="badge gold">{{ profile.featured_title or 'Prominent alumnus' }}</span>
+          {% endif %}
+          {% if profile.placements %}<span class="badge ok">Placed via {{ SITE_NAME }}</span>{% endif %}
           {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
           {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
           {% if profile.is_job_provider %}<span class="badge brand">Job provider</span>{% endif %}
@@ -43,6 +46,17 @@
 
   <div class="split mt3">
     <div class="stack">
+      {% if profile.is_featured and profile.featured_note %}
+        <div class="card prominent-highlight">
+          <h2>{{ profile.featured_title or 'Prominent alumnus' }}</h2>
+          <blockquote class="citation mb0">{{ profile.featured_note|nl2br }}</blockquote>
+          <p class="tiny muted mt2 mb0">
+            Put forward by the {{ DEPARTMENT_NAME }} —
+            <a href="{{ url_for('profiles.prominent') }}">see all prominent alumni</a>.
+          </p>
+        </div>
+      {% endif %}
+
       {% if profile.placements %}
         <div class="card placement-highlight">
           <h2>Hired through {{ SITE_NAME }}</h2>

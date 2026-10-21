@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check, avatar %}
+{% block title %}Highlight {{ member.full_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit recognition' if profile.is_featured else 'Highlight an alumnus' }}</h1>
+    <p class="lede">What the public prominent alumni page says about {{ member.full_name }}.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="split">
+    <div class="card">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.featured_title, placeholder="e.g. Distinguished Alumnus 2026") }}
+        {{ field(form.featured_note, placeholder="Why the department is putting this alumnus forward.") }}
+        {{ field(form.featured_order) }}
+        <p class="hint">Lower numbers appear first.</p>
+        {{ check(form.is_featured) }}
+        <div class="form-actions">
+          <button class="btn" type="submit">Save</button>
+          <a class="btn outline" href="{{ url_for('admin.prominent') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="card center">
+        {{ avatar(member, "lg") }}
+        <h3 class="mt2 mb0">{{ member.full_name }}</h3>
+        <p class="small muted">{{ profile.headline or profile.programme }}</p>
+        <a class="btn outline block" href="{{ url_for('profiles.view_profile', user_id=member.id) }}">View profile</a>
+      </div>
+      <div class="card">
+        <h3>On record</h3>
+        <dl class="kv">
+          <dt>Batch</dt><dd>{{ profile.display_batch }}</dd>
+          <dt>Programme</dt><dd>{{ profile.programme }}</dd>
+          {% if profile.current_position %}<dt>Role</dt><dd>{{ profile.current_position }}</dd>{% endif %}
+          {% if profile.current_company %}<dt>Organisation</dt><dd>{{ profile.current_company }}</dd>{% endif %}
+          {% if profile.experience_years %}<dt>Experience</dt><dd>{{ profile.experience_years|round(1) }} years</dd>{% endif %}
+          <dt>Placements</dt><dd>{{ profile.placements|length }} through the portal</dd>
+          <dt>Postings</dt><dd>{{ member.jobs_posted|length }}</dd>
+        </dl>
+      </div>
+      {% if not (member.is_approved and profile.is_visible and not member.is_blocked) %}
+        <div class="alert alert-warning mb0">
+          This member is
+          {%- if not member.is_approved %} not verified{% endif %}
+          {%- if member.is_blocked %} suspended{% endif %}
+          {%- if not profile.is_visible %} not listed in the directory{% endif %},
+          so they will not appear on the public page until that changes.
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

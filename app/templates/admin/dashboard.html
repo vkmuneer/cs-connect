@@ -96,6 +96,8 @@
         <dl class="kv">
           <dt>Departments</dt><dd>{{ stats.departments_active }} active of {{ stats.departments_total }}</dd>
           <dt>Coordinators</dt><dd>{{ stats.coordinators }} serving</dd>
+          <dt>Prominent alumni</dt>
+          <dd><a href="{{ url_for('admin.prominent') }}">{{ stats.prominent }} highlighted</a></dd>
         </dl>
         <a class="btn outline block mt1" href="{{ url_for('admin.departments') }}">Manage departments</a>
       </div>

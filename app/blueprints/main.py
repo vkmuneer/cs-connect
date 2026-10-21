@@ -21,13 +21,19 @@ def index():
         .limit(6)
         .all()
     )
-    featured_alumni = (
+    # The department's own picks lead; recently updated profiles fill the rest.
+    prominent = Profile.featured_query().limit(4).all()
+    chosen_ids = [p.id for p in prominent]
+    recent = (
         Profile.query.join(User)
-        .filter(User.is_approved.is_(True), User.is_blocked.is_(False), Profile.is_visible.is_(True))
+        .filter(User.is_approved.is_(True), User.is_blocked.is_(False),
+                Profile.is_visible.is_(True))
+        .filter(~Profile.id.in_(chosen_ids) if chosen_ids else True)
         .order_by(Profile.updated_at.desc().nullslast())
-        .limit(8)
+        .limit(8 - len(prominent) if len(prominent) < 8 else 4)
         .all()
     )
+    featured_alumni = recent
     announcements = (
         Announcement.query.filter_by(is_published=True)
         .order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
@@ -60,6 +66,7 @@ def index():
         announcements=announcements,
         stats=stats,
         placements=placements,
+        prominent=prominent,
     )
 
 

@@ -123,6 +123,12 @@
                     {{ confirm_button(confirm_form, url_for('admin.approve_member', user_id=member.id), 'Verify', 'btn sm ok', 'Verify this member?') }}
                   {% endif %}
                   <a class="btn sm outline" href="{{ url_for('admin.edit_member', user_id=member.id) }}">Edit</a>
+                  {% if member.profile %}
+                    <a class="btn sm {{ 'gold' if member.profile.is_featured else 'outline' }}"
+                       href="{{ url_for('admin.highlight_member', user_id=member.id) }}">
+                      {{ 'Highlighted' if member.profile.is_featured else 'Highlight' }}
+                    </a>
+                  {% endif %}
                   {% if member.id != current_user.id %}
                     {{ confirm_button(confirm_form, url_for('admin.block_member', user_id=member.id),
                                       'Reinstate' if member.is_blocked else 'Suspend', 'btn sm outline',

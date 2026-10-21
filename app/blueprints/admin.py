@@ -10,8 +10,8 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.forms import (
     AdminUserForm, AnnouncementForm, ConfirmForm, CoordinatorForm, DepartmentForm,
-    FacultyForm, FeatureToggleForm, JobModerationForm, PortalSettingsForm,
-    SitePageForm,
+    FacultyForm, FeatureAlumnusForm, FeatureToggleForm, JobModerationForm,
+    PortalSettingsForm, SitePageForm,
 )
 from app.models import (
     FIRST_BATCH_YEAR, FUTURE_YEARS, MULTI_DEPARTMENT, ActivityLog, Announcement,
@@ -64,6 +64,7 @@ def dashboard():
         "departments_active": Department.query.filter_by(is_active=True).count(),
         "departments_total": Department.query.count(),
         "coordinators": Coordinator.query.filter_by(is_active=True).count(),
+        "prominent": Profile.query.filter_by(is_featured=True).count(),
         "multi_department": multi_department_enabled(),
     }
     pending_members = (
@@ -841,3 +842,88 @@ def delete_coordinator(coordinator_id):
         db.session.commit()
         flash(f"{label} removed.", "info")
     return redirect(url_for("admin.coordinators"))
+
+
+# --------------------------------------------------------------------------
+# Prominent alumni — curated from the registered members
+# --------------------------------------------------------------------------
+@admin_bp.route("/prominent")
+def prominent():
+    featured = (
+        Profile.query.filter_by(is_featured=True)
+        .order_by(Profile.featured_order, Profile.featured_at.desc().nullslast())
+        .all()
+    )
+    # Members worth considering: most placements, then most recently active.
+    suggestions = (
+        Profile.query.join(User)
+        .filter(
+            Profile.is_featured.is_(False),
+            Profile.is_visible.is_(True),
+            User.is_approved.is_(True),
+            User.is_blocked.is_(False),
+        )
+        .order_by(Profile.experience_years.desc().nullslast(), Profile.batch_year)
+        .limit(12)
+        .all()
+    )
+    return render_template(
+        "admin/prominent.html", featured=featured, suggestions=suggestions,
+        confirm_form=ConfirmForm(),
+    )
+
+
+def _get_profile(user_id):
+    user = _get_user(user_id)
+    if user.profile is None:
+        flash(f"{user.full_name} has not filled in a profile yet.", "warning")
+        return None
+    return user.profile
+
+
+@admin_bp.route("/members/<int:user_id>/highlight", methods=["GET", "POST"])
+def highlight_member(user_id):
+    """Add a member to the prominent alumni page, or edit their citation."""
+    user = _get_user(user_id)
+    profile = _get_profile(user_id)
+    if profile is None:
+        return redirect(url_for("admin.members"))
+
+    form = FeatureAlumnusForm(obj=profile)
+    if form.validate_on_submit():
+        was_featured = profile.is_featured
+        profile.is_featured = form.is_featured.data
+        profile.featured_title = (form.featured_title.data or "").strip() or None
+        profile.featured_note = (form.featured_note.data or "").strip() or None
+        profile.featured_order = form.featured_order.data or 100
+        if profile.is_featured and not was_featured:
+            profile.featured_at = datetime.now(timezone.utc)
+        elif not profile.is_featured:
+            profile.featured_at = None
+
+        ActivityLog.record(
+            current_user,
+            "alumnus_highlight" if profile.is_featured else "alumnus_unhighlight",
+            f"{user.full_name} <{user.email}>",
+        )
+        db.session.commit()
+        if profile.is_featured:
+            flash(f"{user.full_name} now appears among the prominent alumni.", "success")
+        else:
+            flash(f"{user.full_name} is no longer highlighted.", "info")
+        return redirect(url_for("admin.prominent"))
+
+    return render_template("admin/prominent_form.html", form=form, member=user, profile=profile)
+
+
+@admin_bp.route("/members/<int:user_id>/unhighlight", methods=["POST"])
+def unhighlight_member(user_id):
+    user = _get_user(user_id)
+    form = ConfirmForm()
+    if form.validate_on_submit() and user.profile:
+        user.profile.is_featured = False
+        user.profile.featured_at = None
+        ActivityLog.record(current_user, "alumnus_unhighlight", user.email)
+        db.session.commit()
+        flash(f"{user.full_name} is no longer highlighted.", "info")
+    return redirect(request.referrer or url_for("admin.prominent"))

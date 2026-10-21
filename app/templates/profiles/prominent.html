@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Prominent alumni{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('profiles.directory') }}">Alumni</a> / Prominent alumni
+    </div>
+    <h1>Prominent alumni</h1>
+    <p class="lede">
+      Graduates of the {{ DEPARTMENT_NAME }} whom the department puts forward — for
+      what they have built, where they have reached, and what they give back to
+      the juniors who follow them.
+    </p>
+  </div>
+
+  {% if featured %}
+    {% for title, members in groups.items() %}
+      <div class="card mb3">
+        <div class="card-head">
+          <h2>{{ title }}</h2>
+          <span class="small muted">{{ members|length }} alumn{{ 'us' if members|length == 1 else 'i' }}</span>
+        </div>
+        <div class="grid cols-2">
+          {% for profile in members %}
+            {% set member = profile.user %}
+            <div class="tile prominent-card">
+              <div class="row" style="align-items:flex-start;gap:.9rem">
+                {{ avatar(member, "lg") }}
+                <div style="min-width:0;flex:1">
+                  <h3 class="mb0">
+                    <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a>
+                  </h3>
+                  {% if profile.headline %}<div class="small">{{ profile.headline }}</div>{% endif %}
+                  <div class="tiny muted mt1">
+                    {{ profile.programme }} · Batch {{ profile.display_batch }}
+                    {%- if profile.location %} · {{ profile.location }}{% endif %}
+                  </div>
+                  {% if profile.current_position or profile.current_company %}
+                    <div class="tiny muted">
+                      {{ profile.current_position }}{% if profile.current_company %} · {{ profile.current_company }}{% endif %}
+                    </div>
+                  {% endif %}
+                  <div class="chips mt1">
+                    <span class="badge gold">Prominent alumnus</span>
+                    {% if profile.is_hiring %}<span class="badge brand">Hiring</span>{% endif %}
+                    {% if profile.placements %}<span class="badge ok">Placed via {{ SITE_NAME }}</span>{% endif %}
+                  </div>
+                </div>
+              </div>
+              {% if profile.featured_note %}
+                <blockquote class="citation">{{ profile.featured_note|nl2br }}</blockquote>
+              {% endif %}
+              <div class="foot">
+                <span>
+                  {% if profile.experience_years %}{{ profile.experience_years|round(1) }} years' experience{% endif %}
+                </span>
+                <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">View profile →</a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    {{ empty_state("No alumni have been highlighted yet.",
+                   "The department chooses who appears here from the registered members.") }}
+  {% endif %}
+
+  <div class="card">
+    <div class="row between">
+      <div style="max-width:60ch">
+        <h3 class="mb1">Know someone who belongs here?</h3>
+        <p class="small mb0">
+          Every name on this page is a registered member of the network. If a
+          batchmate of yours deserves the recognition, write to the department
+          with their name and batch.
+        </p>
+      </div>
+      <a class="btn outline" href="{{ url_for('main.contact') }}">Contact the department</a>
+    </div>
+  </div>
+{% endblock %}

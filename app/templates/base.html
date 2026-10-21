@@ -45,6 +45,7 @@
       <a href="{{ url_for('main.about_department') }}" class="{{ 'active' if ep == 'main.about_department' }}">Department</a>
       <a href="{{ url_for('main.faculty') }}" class="{{ 'active' if ep == 'main.faculty' }}">Faculty</a>
       <a href="{{ url_for('profiles.directory') }}" class="{{ 'active' if ep == 'profiles.directory' }}">Alumni</a>
+      <a href="{{ url_for('profiles.prominent') }}" class="{{ 'active' if ep == 'profiles.prominent' }}">Prominent</a>
       <a href="{{ url_for('profiles.batches') }}" class="{{ 'active' if ep in ('profiles.batches', 'profiles.batch') }}">Batches</a>
       <a href="{{ url_for('jobs.listing') }}" class="{{ 'active' if ep == 'jobs.listing' }}">Opportunities</a>
       <a href="{{ url_for('main.placements') }}" class="{{ 'active' if ep == 'main.placements' }}">Placements</a>
@@ -129,6 +130,7 @@
         <h4>Network</h4>
         <ul>
           <li><a href="{{ url_for('profiles.directory') }}">Alumni directory</a></li>
+          <li><a href="{{ url_for('profiles.prominent') }}">Prominent alumni</a></li>
           <li><a href="{{ url_for('profiles.batches') }}">Browse by batch</a></li>
           <li><a href="{{ url_for('main.placements') }}">Placements</a></li>
           <li><a href="{{ url_for('main.coordinators') }}">Coordinators</a></li>

@@ -1,7 +1,7 @@
 """Initial content and demo data for CS Connect."""
 import secrets
 import string
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from flask import current_app
 
@@ -530,6 +530,23 @@ def _seed_members_and_jobs():
                      "group and can join full-time from next month.",
         status=ApplicationStatus.SHORTLISTED,
     ))
+    # Two alumni put forward by the department, to show the facility in use.
+    for email, title, note, order in [
+        ("nasrin.cs@example.com", "Distinguished Alumna 2026",
+         "M.Sc 2018. Senior engineer on Zoho's billing platform, and the first "
+         "person from the department to mentor three successive final-year "
+         "project teams. Reviews resumes for every junior who asks.", 1),
+        ("jaleel.cloud@example.com", "Industry Leader",
+         "B.Sc 2015. Runs platform engineering at Gadgeon and has referred eleven "
+         "graduates of the department into the company since 2019.", 2),
+    ]:
+        profile = users[email].profile
+        profile.is_featured = True
+        profile.featured_title = title
+        profile.featured_note = note
+        profile.featured_order = order
+        profile.featured_at = datetime.now(timezone.utc)
+
     # Two offers accepted through the portal — the placement showcase.
     db.session.add(Application(
         job_id=jobs["Junior Flutter Developer"].id,

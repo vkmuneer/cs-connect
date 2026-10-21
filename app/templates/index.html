@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import job_card, member_card, empty_state %}
+{% from "macros.html" import avatar, job_card, member_card, empty_state %}
 {% block title %}Alumni network of the Department of Computer Science{% endblock %}
 
 {% block content %}
@@ -48,6 +48,41 @@
           {{ empty_state("No openings listed yet.", "Alumni postings appear here once the department approves them.") }}
         {% endif %}
       </div>
+
+      {% if prominent %}
+        <div class="card mt3">
+          <div class="card-head">
+            <h2>Prominent alumni</h2>
+            <a class="small" href="{{ url_for('profiles.prominent') }}">See all →</a>
+          </div>
+          <p class="small muted">
+            Graduates the department puts forward, chosen from our registered members.
+          </p>
+          <div class="grid cols-2">
+            {% for profile in prominent %}
+              {% set member = profile.user %}
+              <div class="tile prominent-card">
+                <div class="row" style="align-items:flex-start;gap:.8rem">
+                  {{ avatar(member) }}
+                  <div style="min-width:0">
+                    <div class="strong">
+                      <a href="{{ url_for('profiles.view_profile', user_id=member.id) }}">{{ member.full_name }}</a>
+                    </div>
+                    <div class="tiny muted">{{ profile.headline or profile.current_position or profile.programme }}</div>
+                    <div class="tiny muted">Batch {{ profile.display_batch }}</div>
+                    {% if profile.featured_title %}
+                      <span class="badge gold mt1">{{ profile.featured_title }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+                {% if profile.featured_note %}
+                  <p class="small mb0">{{ profile.featured_note|truncate(150) }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
 
       {% if placements %}
         <div class="card mt3 placement-highlight">

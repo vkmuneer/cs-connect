@@ -49,6 +49,7 @@
         {%- if profile.location %} · {{ profile.location }}{% endif %}
       </div>
       <div class="chips mt1">
+        {% if profile.is_featured %}<span class="badge gold">Prominent alumnus</span>{% endif %}
         {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
         {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
         {% for skill in profile.skills[:3] %}<span class="chip">{{ skill.name }}</span>{% endfor %}

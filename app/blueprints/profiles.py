@@ -95,7 +95,8 @@ def directory():
 
     page_num = request.args.get("page", 1, type=int)
     pagination = query.order_by(
-        Profile.open_to_work.desc(), Profile.batch_year.desc(), User.full_name
+        Profile.is_featured.desc(), Profile.open_to_work.desc(),
+        Profile.batch_year.desc(), User.full_name
     ).paginate(
         page=page_num, per_page=current_app.config["ITEMS_PER_PAGE"], error_out=False
     )
@@ -191,6 +192,18 @@ def batch(year):
         programmes=[p for p, _ in programme_choices()],
         departments=Department.active() if multi_department_enabled() else [],
         department_id=department_id,
+    )
+
+
+@profiles_bp.route("/prominent")
+def prominent():
+    """Alumni the department puts forward, grouped by recognition."""
+    featured = Profile.featured_query().all()
+    groups = {}
+    for profile in featured:
+        groups.setdefault(profile.featured_title or "Prominent alumni", []).append(profile)
+    return render_template(
+        "profiles/prominent.html", featured=featured, groups=groups,
     )
 
 
