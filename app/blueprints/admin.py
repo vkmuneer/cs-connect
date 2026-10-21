@@ -10,13 +10,16 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.forms import (
     AdminUserForm, AnnouncementForm, ConfirmForm, CoordinatorForm, DepartmentForm,
-    FacultyForm, FeatureAlumnusForm, FeatureToggleForm, JobModerationForm,
-    PortalSettingsForm, SitePageForm,
+    FacultyForm, FeatureAlumnusForm, FeatureToggleForm, GalleryAlbumForm,
+    GalleryImageForm, GalleryUploadForm, JobModerationForm, PortalSettingsForm,
+    SiteLinksForm, SitePageForm, TalkSessionForm,
 )
 from app.models import (
     FIRST_BATCH_YEAR, FUTURE_YEARS, MULTI_DEPARTMENT, ActivityLog, Announcement,
-    Application, ApplicationStatus, Coordinator, Department, Faculty, Job,
-    JobStatus, Message, Profile, Role, Setting, SitePage, Skill, User,
+    Application, ApplicationStatus, Coordinator, Department, Faculty, GalleryAlbum,
+    GalleryImage, Internship,
+    InternshipStatus, Job, JobStatus, Message, Profile, Role, Setting, SitePage,
+    Skill, TalkSession, TalkStatus, User,
 )
 from app.utils import (
     admin_required, batch_year_bounds, delete_upload, multi_department_enabled,
@@ -65,6 +68,13 @@ def dashboard():
         "departments_total": Department.query.count(),
         "coordinators": Coordinator.query.filter_by(is_active=True).count(),
         "prominent": Profile.query.filter_by(is_featured=True).count(),
+        "internships": Internship.query.filter_by(status=InternshipStatus.APPROVED).count(),
+        "pending_internships": Internship.query.filter_by(
+            status=InternshipStatus.PENDING).count(),
+        "talks_upcoming": len(TalkSession.upcoming()),
+        "speakers": Profile.query.filter_by(offers_expert_talk=True).count(),
+        "albums": GalleryAlbum.query.count(),
+        "gallery_images": GalleryImage.query.count(),
         "multi_department": multi_department_enabled(),
     }
     pending_members = (
@@ -990,3 +1000,444 @@ def batch_coordinators():
         first_year=first_year, last_year=last_year, total_years=total_years,
         covered=covered, confirm_form=ConfirmForm(),
     )
+
+
+# --------------------------------------------------------------------------
+# Outward links shown in the header and footer
+# --------------------------------------------------------------------------
+@admin_bp.route("/links", methods=["GET", "POST"])
+def links():
+    from app.content import SOCIAL_DEFAULTS, SOCIAL_LINKS, social_links
+
+    form = SiteLinksForm()
+    if form.validate_on_submit():
+        for key, _label, _placeholder, _icon in SOCIAL_LINKS:
+            value = (getattr(form, key).data or "").strip()
+            Setting.put(key, value)
+        ActivityLog.record(current_user, "links_save", "site links updated")
+        db.session.commit()
+        flash("Links saved.", "success")
+        return redirect(url_for("admin.links"))
+
+    if request.method == "GET":
+        for key, _label, _placeholder, _icon in SOCIAL_LINKS:
+            getattr(form, key).data = Setting.get(key, SOCIAL_DEFAULTS.get(key, ""))
+
+    return render_template(
+        "admin/links.html", form=form, fields=SOCIAL_LINKS, active=social_links(),
+    )
+
+
+# --------------------------------------------------------------------------
+# Internship moderation
+# --------------------------------------------------------------------------
+@admin_bp.route("/internships")
+def internships():
+    scope = request.args.get("scope", "pending")
+    query = Internship.query
+    if scope in (InternshipStatus.PENDING, InternshipStatus.APPROVED,
+                 InternshipStatus.REJECTED, InternshipStatus.CLOSED):
+        query = query.filter_by(status=scope)
+    rows = query.order_by(Internship.created_at.desc()).all()
+    counts = {
+        "all": Internship.query.count(),
+        InternshipStatus.PENDING: Internship.query.filter_by(
+            status=InternshipStatus.PENDING).count(),
+        InternshipStatus.APPROVED: Internship.query.filter_by(
+            status=InternshipStatus.APPROVED).count(),
+        InternshipStatus.REJECTED: Internship.query.filter_by(
+            status=InternshipStatus.REJECTED).count(),
+        InternshipStatus.CLOSED: Internship.query.filter_by(
+            status=InternshipStatus.CLOSED).count(),
+    }
+    return render_template(
+        "admin/internships.html", internships=rows, scope=scope, counts=counts,
+        confirm_form=ConfirmForm(), moderation_form=JobModerationForm(),
+    )
+
+
+def _get_internship(internship_id):
+    internship = db.session.get(Internship, internship_id)
+    if internship is None:
+        abort(404)
+    return internship
+
+
+@admin_bp.route("/internships/<int:internship_id>/approve", methods=["POST"])
+def approve_internship(internship_id):
+    internship = _get_internship(internship_id)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        internship.status = InternshipStatus.APPROVED
+        internship.rejection_note = None
+        db.session.add(Message(
+            sender_id=current_user.id, recipient_id=internship.offered_by_id,
+            subject=f"Approved: {internship.title}",
+            body=f"Your internship “{internship.title}” at {internship.organisation} is "
+                 f"now listed for the students of the department. Thank you.",
+        ))
+        ActivityLog.record(current_user, "internship_approve", f"#{internship.id} {internship.title}")
+        db.session.commit()
+        flash(f"“{internship.title}” is now listed for students.", "success")
+    return redirect(request.referrer or url_for("admin.internships"))
+
+
+@admin_bp.route("/internships/<int:internship_id>/reject", methods=["POST"])
+def reject_internship(internship_id):
+    internship = _get_internship(internship_id)
+    form = JobModerationForm()
+    if form.validate_on_submit():
+        internship.status = InternshipStatus.REJECTED
+        internship.rejection_note = form.rejection_note.data or None
+        db.session.add(Message(
+            sender_id=current_user.id, recipient_id=internship.offered_by_id,
+            subject=f"Not approved: {internship.title}",
+            body=f"Your internship “{internship.title}” was not approved."
+                 + (f"\n\nReason: {internship.rejection_note}" if internship.rejection_note else "")
+                 + "\n\nYou can edit it and submit it again.",
+        ))
+        ActivityLog.record(current_user, "internship_reject", f"#{internship.id}")
+        db.session.commit()
+        flash("The offer was rejected and the alumnus notified.", "info")
+    return redirect(request.referrer or url_for("admin.internships"))
+
+
+@admin_bp.route("/internships/<int:internship_id>/delete", methods=["POST"])
+def delete_internship(internship_id):
+    internship = _get_internship(internship_id)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        label = f"#{internship.id} {internship.title}"
+        db.session.delete(internship)
+        ActivityLog.record(current_user, "internship_delete", label)
+        db.session.commit()
+        flash("The internship has been deleted.", "info")
+    return redirect(url_for("admin.internships"))
+
+
+# --------------------------------------------------------------------------
+# Expert talks: who is willing, and what is scheduled
+# --------------------------------------------------------------------------
+def _speaker_choices():
+    """Members who have offered to speak, plus anyone already scheduled."""
+    rows = Profile.speakers_query().all()
+    choices = [
+        (str(p.user_id), f"{p.user.full_name} — {p.headline or p.programme}")
+        for p in rows
+    ]
+    known = {value for value, _label in choices}
+    for talk in TalkSession.query.all():
+        if str(talk.speaker_id) not in known and talk.speaker:
+            choices.append((str(talk.speaker_id), f"{talk.speaker.full_name} (not listed)"))
+            known.add(str(talk.speaker_id))
+    return choices
+
+
+@admin_bp.route("/talks")
+def talks():
+    upcoming = TalkSession.upcoming()
+    past = [
+        t for t in TalkSession.query.order_by(
+            TalkSession.scheduled_for.desc().nullslast()
+        ).all()
+        if t not in upcoming
+    ]
+    speakers = Profile.speakers_query().all()
+    return render_template(
+        "admin/talks.html", upcoming=upcoming, past=past, speakers=speakers,
+        confirm_form=ConfirmForm(),
+    )
+
+
+@admin_bp.route("/talks/new", methods=["GET", "POST"])
+@admin_bp.route("/talks/<int:talk_id>/edit", methods=["GET", "POST"])
+def edit_talk(talk_id=None):
+    talk = db.session.get(TalkSession, talk_id) if talk_id else None
+    if talk_id and talk is None:
+        abort(404)
+
+    form = TalkSessionForm(obj=talk)
+    form.speaker.choices = _speaker_choices()
+    if request.method == "GET":
+        if talk is not None:
+            form.speaker.data = str(talk.speaker_id)
+            if talk.scheduled_for:
+                form.scheduled_date.data = talk.scheduled_for.date()
+                form.scheduled_time.data = talk.scheduled_for.strftime("%H:%M")
+        else:
+            requested = request.args.get("speaker", type=int)
+            if requested:
+                form.speaker.data = str(requested)
+
+    if form.validate_on_submit():
+        speaker = db.session.get(User, int(form.speaker.data or 0))
+        if speaker is None:
+            flash("Choose a speaker for this session.", "danger")
+            return render_template("admin/talks_form.html", form=form, talk=talk)
+
+        creating = talk is None
+        if creating:
+            talk = TalkSession(arranged_by_id=current_user.id)
+            db.session.add(talk)
+        talk.speaker_id = speaker.id
+        for field in ("title", "topic", "mode", "venue", "audience", "status", "notes"):
+            setattr(talk, field, getattr(form, field).data)
+        talk.duration_minutes = form.duration_minutes.data or 60
+
+        if form.scheduled_date.data:
+            hour, minute = 10, 0
+            if form.scheduled_time.data:
+                hour, minute = (int(part) for part in form.scheduled_time.data.split(":"))
+            talk.scheduled_for = datetime(
+                form.scheduled_date.data.year, form.scheduled_date.data.month,
+                form.scheduled_date.data.day, hour, minute, tzinfo=timezone.utc,
+            )
+        else:
+            talk.scheduled_for = None
+
+        # Tell the speaker, so a session is never scheduled behind their back.
+        db.session.add(Message(
+            sender_id=current_user.id, recipient_id=speaker.id,
+            subject=f"Session {'scheduled' if creating else 'updated'}: {talk.title}",
+            body=f"The department has {'scheduled' if creating else 'updated'} your "
+                 f"session “{talk.title}”.\n\n"
+                 f"When: {talk.when_label}\n"
+                 f"Mode: {talk.mode}\n"
+                 f"Where: {talk.venue or 'to be confirmed'}\n"
+                 f"Status: {talk.status}\n\n"
+                 f"Reply to this message if the timing does not suit you.",
+        ))
+        ActivityLog.record(current_user, "talk_save", f"{talk.title} · {speaker.full_name}")
+        db.session.commit()
+        flash("Session saved, and the speaker has been notified.", "success")
+        return redirect(url_for("admin.talks"))
+
+    return render_template("admin/talks_form.html", form=form, talk=talk)
+
+
+@admin_bp.route("/talks/<int:talk_id>/delete", methods=["POST"])
+def delete_talk(talk_id):
+    talk = db.session.get(TalkSession, talk_id)
+    if talk is None:
+        abort(404)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        title = talk.title
+        db.session.delete(talk)
+        ActivityLog.record(current_user, "talk_delete", title)
+        db.session.commit()
+        flash(f"“{title}” removed.", "info")
+    return redirect(url_for("admin.talks"))
+
+
+# --------------------------------------------------------------------------
+# Photo gallery
+# --------------------------------------------------------------------------
+@admin_bp.route("/gallery")
+def gallery():
+    albums = GalleryAlbum.query.order_by(
+        GalleryAlbum.sort_order, GalleryAlbum.event_date.desc().nullslast()
+    ).all()
+    return render_template(
+        "admin/gallery.html", albums=albums, confirm_form=ConfirmForm(),
+    )
+
+
+@admin_bp.route("/gallery/new", methods=["GET", "POST"])
+@admin_bp.route("/gallery/<int:album_id>/edit", methods=["GET", "POST"])
+def edit_album(album_id=None):
+    album = db.session.get(GalleryAlbum, album_id) if album_id else None
+    if album_id and album is None:
+        abort(404)
+
+    form = GalleryAlbumForm(obj=album)
+    if form.validate_on_submit():
+        slug = GalleryAlbum.slugify(form.title.data)
+        clash = GalleryAlbum.query.filter(
+            GalleryAlbum.slug == slug, GalleryAlbum.id != (album.id if album else 0)
+        ).first()
+        if clash:
+            slug = f"{slug}-{int(datetime.now(timezone.utc).timestamp()) % 10000}"
+
+        if album is None:
+            album = GalleryAlbum(slug=slug)
+            db.session.add(album)
+        else:
+            album.slug = slug
+        for field in ("title", "description", "event_date", "is_published"):
+            setattr(album, field, getattr(form, field).data)
+        album.sort_order = form.sort_order.data or 100
+        ActivityLog.record(current_user, "album_save", album.title)
+        db.session.commit()
+        flash(f"“{album.title}” saved.", "success")
+        return redirect(url_for("admin.album_images", album_id=album.id))
+
+    return render_template("admin/gallery_form.html", form=form, album=album)
+
+
+@admin_bp.route("/gallery/<int:album_id>/images", methods=["GET", "POST"])
+def album_images(album_id):
+    album = db.session.get(GalleryAlbum, album_id)
+    if album is None:
+        abort(404)
+
+    form = GalleryUploadForm()
+    if form.validate_on_submit():
+        files = request.files.getlist("images")
+        added, refused = 0, []
+        for index, storage in enumerate(files):
+            if not storage or not storage.filename:
+                continue
+            try:
+                stored = save_upload(storage, "gallery")
+            except ValueError as exc:
+                refused.append(f"{storage.filename}: {exc}")
+                continue
+            if stored:
+                db.session.add(GalleryImage(
+                    album_id=album.id, filename=stored,
+                    caption=(form.caption.data or "").strip() or None,
+                    sort_order=100 + len(album.images) + index,
+                    uploaded_by_id=current_user.id,
+                ))
+                added += 1
+        if added:
+            ActivityLog.record(current_user, "gallery_upload", f"{added} to {album.title}")
+            db.session.commit()
+            flash(f"{added} image{'' if added == 1 else 's'} added.", "success")
+        for problem in refused:
+            flash(problem, "danger")
+        if not added and not refused:
+            flash("Choose at least one image to upload.", "warning")
+        return redirect(url_for("admin.album_images", album_id=album.id))
+
+    return render_template(
+        "admin/gallery_images.html", album=album, form=form,
+        image_form=GalleryImageForm(), confirm_form=ConfirmForm(),
+    )
+
+
+@admin_bp.route("/gallery/image/<int:image_id>/update", methods=["POST"])
+def update_gallery_image(image_id):
+    image = db.session.get(GalleryImage, image_id)
+    if image is None:
+        abort(404)
+    form = GalleryImageForm()
+    if form.validate_on_submit():
+        image.caption = (form.caption.data or "").strip() or None
+        image.sort_order = form.sort_order.data or 100
+        db.session.commit()
+        flash("Image updated.", "success")
+    return redirect(url_for("admin.album_images", album_id=image.album_id))
+
+
+@admin_bp.route("/gallery/image/<int:image_id>/cover", methods=["POST"])
+def set_album_cover(image_id):
+    image = db.session.get(GalleryImage, image_id)
+    if image is None:
+        abort(404)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        image.album.cover_image_id = image.id
+        db.session.commit()
+        flash("Cover image set.", "success")
+    return redirect(url_for("admin.album_images", album_id=image.album_id))
+
+
+@admin_bp.route("/gallery/image/<int:image_id>/delete", methods=["POST"])
+def delete_gallery_image(image_id):
+    image = db.session.get(GalleryImage, image_id)
+    if image is None:
+        abort(404)
+    album_id = image.album_id
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        if image.album.cover_image_id == image.id:
+            image.album.cover_image_id = None
+        delete_upload(image.filename, "gallery")
+        db.session.delete(image)
+        ActivityLog.record(current_user, "gallery_image_delete", image.filename)
+        db.session.commit()
+        flash("Image removed.", "info")
+    return redirect(url_for("admin.album_images", album_id=album_id))
+
+
+@admin_bp.route("/gallery/<int:album_id>/delete", methods=["POST"])
+def delete_album(album_id):
+    album = db.session.get(GalleryAlbum, album_id)
+    if album is None:
+        abort(404)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        title = album.title
+        for image in album.images:
+            delete_upload(image.filename, "gallery")
+        db.session.delete(album)
+        ActivityLog.record(current_user, "album_delete", title)
+        db.session.commit()
+        flash(f"“{title}” and its images were removed.", "info")
+    return redirect(url_for("admin.gallery"))
+
+
+# --------------------------------------------------------------------------
+# Editable page text
+# --------------------------------------------------------------------------
+@admin_bp.route("/content", methods=["GET", "POST"])
+def content():
+    """Every piece of copy on the home page and the member dashboard."""
+    from app.content import TEXT_DEFAULTS, text_groups
+
+    if request.method == "POST":
+        changed = restored = 0
+        for key, default in TEXT_DEFAULTS.items():
+            if key not in request.form:
+                continue
+            submitted = (request.form.get(key) or "").strip()
+            stored = Setting.get(key)
+            if not submitted or submitted == default.strip():
+                # Empty, or back to the shipped wording: drop the override.
+                if stored is not None:
+                    Setting.clear(key)
+                    restored += 1
+            elif submitted != (stored or ""):
+                Setting.put(key, submitted)
+                changed += 1
+
+        if changed or restored:
+            ActivityLog.record(
+                current_user, "content_save",
+                f"{changed} edited, {restored} restored to default",
+            )
+            db.session.commit()
+            parts = []
+            if changed:
+                parts.append(f"{changed} text{'' if changed == 1 else 's'} updated")
+            if restored:
+                parts.append(f"{restored} restored to the default")
+            flash(" and ".join(parts).capitalize() + ".", "success")
+        else:
+            flash("Nothing changed.", "info")
+        return redirect(url_for("admin.content"))
+
+    return render_template("admin/content.html", groups=text_groups())
+
+
+@admin_bp.route("/content/reset", methods=["POST"])
+def reset_content():
+    """Put every piece of copy back to the wording the portal ships with."""
+    from app.content import TEXT_DEFAULTS
+
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        cleared = 0
+        for key in TEXT_DEFAULTS:
+            if Setting.clear(key) is not None:
+                cleared += 1
+        ActivityLog.record(current_user, "content_reset", f"{cleared} texts")
+        db.session.commit()
+        flash(
+            f"{cleared} text{'' if cleared == 1 else 's'} restored to the default wording."
+            if cleared else "Everything was already at the default wording.",
+            "info",
+        )
+    return redirect(url_for("admin.content"))

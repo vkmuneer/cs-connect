@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% block title %}Gallery{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Gallery</h1>
+        <p class="lede">Albums of photographs from department and alumni events.</p>
+      </div>
+      <div class="btn-group">
+        <a class="btn outline" href="{{ url_for('main.gallery') }}">Public gallery</a>
+        <a class="btn" href="{{ url_for('admin.edit_album') }}">New album</a>
+      </div>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  {% if albums %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Album</th><th>Event date</th><th>Photos</th><th>State</th><th>Order</th><th></th></tr></thead>
+        <tbody>
+          {% for album in albums %}
+            <tr>
+              <td>
+                <div class="row">
+                  {% if album.cover %}
+                    <img class="thumb" src="{{ url_for('static', filename='uploads/gallery/' ~ album.cover.filename) }}" alt="">
+                  {% else %}
+                    <span class="thumb thumb-empty">—</span>
+                  {% endif %}
+                  <div>
+                    <a href="{{ url_for('admin.album_images', album_id=album.id) }}">{{ album.title }}</a>
+                    <div class="tiny muted mono">{{ album.slug }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="small nowrap">{{ album.event_date.strftime('%d %b %Y') if album.event_date else '—' }}</td>
+              <td>{{ album.image_count }}</td>
+              <td>
+                {% if album.is_published %}<span class="badge ok">Published</span>
+                {% else %}<span class="badge warn">Draft</span>{% endif %}
+              </td>
+              <td class="small">{{ album.sort_order }}</td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  <a class="btn sm" href="{{ url_for('admin.album_images', album_id=album.id) }}">Photos</a>
+                  <a class="btn sm outline" href="{{ url_for('admin.edit_album', album_id=album.id) }}">Edit</a>
+                  {{ confirm_button(confirm_form, url_for('admin.delete_album', album_id=album.id),
+                                    'Delete', 'btn sm danger',
+                                    'Delete this album and all of its photographs?') }}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ empty_state("No albums yet.", "Create one, then upload the photographs into it.") }}
+  {% endif %}
+{% endblock %}

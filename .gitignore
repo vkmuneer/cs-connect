@@ -6,5 +6,7 @@ __pycache__/
 *.py[cod]
 app/static/uploads/photos/*
 app/static/uploads/resumes/*
+app/static/uploads/gallery/*
 !app/static/uploads/photos/.gitkeep
 !app/static/uploads/resumes/.gitkeep
+!app/static/uploads/gallery/.gitkeep

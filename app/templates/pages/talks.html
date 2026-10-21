@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Talks &amp; sessions{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Talks &amp; sessions</div>
+    <h1>Talks &amp; sessions by our alumni</h1>
+    <p class="lede">
+      Graduates of the department come back — on campus or online — to talk to
+      the students who are where they once were.
+    </p>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head"><h2>Coming up</h2></div>
+        {% if upcoming %}
+          <div class="stack">
+            {% for talk in upcoming %}
+              <div class="tile talk-card">
+                <div class="row between">
+                  <div>
+                    <h3 class="mb0">{{ talk.title }}</h3>
+                    <div class="small muted">
+                      {{ talk.speaker.full_name }}
+                      {%- if talk.speaker.profile %} · Batch {{ talk.speaker.profile.display_batch }}{% endif %}
+                    </div>
+                  </div>
+                  <div class="right">
+                    <span class="badge {{ 'ok' if talk.status == 'confirmed' else 'warn' }}">{{ talk.status|title }}</span>
+                  </div>
+                </div>
+                {% if talk.topic %}<p class="small mb0">{{ talk.topic|truncate(220) }}</p>{% endif %}
+                <div class="chips">
+                  <span class="badge brand">{{ talk.mode }}</span>
+                  {% if talk.duration_minutes %}<span class="badge">{{ talk.duration_minutes }} min</span>{% endif %}
+                  {% if talk.audience %}<span class="badge">{{ talk.audience }}</span>{% endif %}
+                </div>
+                <div class="foot">
+                  <span class="strong">{{ talk.when_label }}</span>
+                  <span>{{ talk.venue or 'Venue to be confirmed' }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ empty_state("No sessions scheduled at the moment.",
+                         "The department arranges these with alumni through the year.") }}
+        {% endif %}
+      </div>
+
+      {% if past %}
+        <div class="card">
+          <div class="card-head"><h2>Already held</h2></div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Session</th><th>Speaker</th><th>When</th><th>Mode</th></tr></thead>
+              <tbody>
+                {% for talk in past %}
+                  <tr>
+                    <td>{{ talk.title }}</td>
+                    <td class="small">{{ talk.speaker.full_name }}</td>
+                    <td class="tiny muted nowrap">{{ talk.when_label }}</td>
+                    <td class="small">{{ talk.mode }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <div class="card-head"><h3>Alumni willing to speak</h3></div>
+        {% if speakers %}
+          <ul class="list-plain">
+            {% for profile in speakers %}
+              <li>
+                <div class="row">
+                  {{ avatar(profile.user, "sm") }}
+                  <div style="min-width:0">
+                    <a href="{{ url_for('profiles.view_profile', user_id=profile.user_id) }}">
+                      {{ profile.user.full_name }}
+                    </a>
+                    <div class="tiny muted">{{ profile.headline or profile.programme }}</div>
+                    <div class="tiny muted">{{ profile.talk_mode or 'Either' }}</div>
+                    {% if profile.talk_topics %}
+                      <div class="tiny mt1">{{ profile.talk_topics|truncate(110) }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted mb0">Nobody has offered yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Willing to give a session?</h3>
+        <p class="small">
+          Tick the box on your profile and list the topics you can speak on. The
+          department will get in touch to fix a date.
+        </p>
+        {% if current_user.is_authenticated %}
+          <a class="btn block" href="{{ url_for('profiles.edit_profile') }}">Offer a session</a>
+        {% else %}
+          <a class="btn block" href="{{ url_for('auth.login') }}">Sign in to offer</a>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+{% endblock %}

@@ -17,6 +17,9 @@ ADDED_COLUMNS = {
         "featured_note": "TEXT",
         "featured_order": "INTEGER NOT NULL DEFAULT 100",
         "featured_at": "DATETIME",
+        "offers_expert_talk": "BOOLEAN NOT NULL DEFAULT 0",
+        "talk_topics": "TEXT",
+        "talk_mode": "VARCHAR(20)",
     },
     "coordinators": {
         "batch_year": "INTEGER",

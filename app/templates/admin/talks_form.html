@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}{{ 'Edit session' if talk else 'Schedule a session' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit session' if talk else 'Schedule a session' }}</h1>
+    <p class="lede">The speaker is notified by portal message whenever this is saved.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.speaker) }}
+        {{ field(form.title, placeholder="e.g. From our classrooms to a product team") }}
+        {{ field(form.topic, placeholder="What the session covers, and what students should bring to it.") }}
+        {{ field(form.audience, placeholder="Final-year B.Sc and M.Sc students") }}
+        {{ field(form.notes, placeholder="Internal notes — travel, equipment, who is hosting.") }}
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {{ field(form.mode) }}
+          {{ field(form.venue, placeholder="Seminar hall, or a meeting link") }}
+          <div class="grid cols-2">
+            {{ field(form.scheduled_date) }}
+            {{ field(form.scheduled_time, placeholder="14:30") }}
+          </div>
+          {{ field(form.duration_minutes) }}
+          {{ field(form.status) }}
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save session</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.talks') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

@@ -22,6 +22,7 @@ class Config:
     UPLOAD_FOLDER = BASE_DIR / "app" / "static" / "uploads"
     RESUME_FOLDER = UPLOAD_FOLDER / "resumes"
     PHOTO_FOLDER = UPLOAD_FOLDER / "photos"
+    GALLERY_FOLDER = UPLOAD_FOLDER / "gallery"
     MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8 MB per request
     ALLOWED_RESUME_EXTENSIONS = {"pdf", "doc", "docx"}
     ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}

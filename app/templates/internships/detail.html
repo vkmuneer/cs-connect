@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar %}
+{% from "macros_internship.html" import internship_status_badge %}
+{% block title %}{{ internship.title }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('main.index') }}">Home</a> /
+    <a href="{{ url_for('internships.listing') }}">Internships</a> / {{ internship.title }}
+  </div>
+
+  <div class="card">
+    <div class="row between">
+      <div>
+        <h1 class="mb0">{{ internship.title }}</h1>
+        <p class="muted mb1">
+          {{ internship.organisation }}{% if internship.location %} · {{ internship.location }}{% endif %}
+        </p>
+        <div class="chips">
+          <span class="badge brand">{{ internship.mode }}</span>
+          <span class="badge">{{ internship.duration_label }}</span>
+          {% if internship.is_paid %}<span class="badge gold">{{ internship.stipend or 'Paid' }}</span>
+          {% else %}<span class="badge">Unpaid</span>{% endif %}
+          {{ internship_status_badge(internship) }}
+        </div>
+      </div>
+      <div class="right">
+        {% if existing %}
+          <span class="badge ok">Interest sent — {{ existing.status|title }}</span>
+          <div class="tiny muted mt1">on {{ existing.created_at.strftime('%d %b %Y') }}</div>
+        {% elif internship.is_open and internship.seats_left %}
+          <a class="btn gold" href="{{ url_for('internships.express_interest', internship_id=internship.id) }}">
+            Express interest
+          </a>
+        {% elif internship.is_open %}
+          <span class="badge warn">All places taken</span>
+        {% endif %}
+        {% if can_manage %}
+          <div class="btn-group mt2">
+            <a class="btn sm outline" href="{{ url_for('internships.edit', internship_id=internship.id) }}">Edit</a>
+            <a class="btn sm outline" href="{{ url_for('internships.interested', internship_id=internship.id) }}">
+              Interested ({{ internship.interests|length }})
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if internship.status == 'rejected' and can_manage and internship.rejection_note %}
+    <div class="alert alert-danger mt2">
+      <span class="strong">Not approved:</span> {{ internship.rejection_note }}
+    </div>
+  {% endif %}
+
+  <div class="split mt3">
+    <div class="stack">
+      <div class="card prose">
+        <h2>What the intern will do</h2>
+        <p>{{ internship.description|nl2br }}</p>
+        {% if internship.learning_outcomes %}
+          <h2 class="mt3">What they will learn</h2>
+          <p>{{ internship.learning_outcomes|nl2br }}</p>
+        {% endif %}
+        {% if internship.eligibility %}
+          <h2 class="mt3">Who can apply</h2>
+          <p class="mb0">{{ internship.eligibility }}</p>
+        {% endif %}
+      </div>
+
+      {% if internship.skills %}
+        <div class="card">
+          <h2>Skills expected</h2>
+          <div class="chips">
+            {% for skill in internship.skills %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>At a glance</h3>
+        <dl class="kv">
+          <dt>Mode</dt><dd>{{ internship.mode }}</dd>
+          <dt>Duration</dt><dd>{{ internship.duration_label }}</dd>
+          <dt>Places</dt><dd>{{ internship.seats }} ({{ internship.seats_left }} left)</dd>
+          <dt>Stipend</dt><dd>{{ internship.stipend if internship.is_paid else 'Unpaid' }}</dd>
+          {% if internship.starts_from %}<dt>Starts</dt><dd>{{ internship.starts_from.strftime('%d %B %Y') }}</dd>{% endif %}
+          <dt>Apply by</dt>
+          <dd>{{ internship.apply_by.strftime('%d %B %Y') if internship.apply_by else 'No closing date' }}</dd>
+          <dt>Posted</dt><dd>{{ internship.created_at|timeago }}</dd>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3>Offered by</h3>
+        <div class="row">
+          {{ avatar(internship.offered_by, "sm") }}
+          <div>
+            <a href="{{ url_for('profiles.view_profile', user_id=internship.offered_by_id) }}">
+              {{ internship.offered_by.full_name }}
+            </a>
+            {% if internship.offered_by.profile %}
+              <div class="tiny muted">Batch {{ internship.offered_by.profile.display_batch }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% if current_user.is_authenticated and current_user.id != internship.offered_by_id %}
+          <a class="btn outline block mt2" href="{{ url_for('messages.compose', user_id=internship.offered_by_id) }}">
+            Message them
+          </a>
+        {% endif %}
+      </div>
+    </aside>
+  </div>
+{% endblock %}

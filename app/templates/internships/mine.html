@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% from "macros_internship.html" import internship_status_badge %}
+{% block title %}My internships{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>My internships</h1>
+        <p class="lede">Places you offer, and the ones you have put your hand up for.</p>
+      </div>
+      <a class="btn" href="{{ url_for('internships.create') }}">Offer an internship</a>
+    </div>
+  </div>
+
+  <div class="card mb3">
+    <div class="card-head"><h2>Offered by me</h2></div>
+    {% if offered %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Internship</th><th>Status</th><th>Interested</th><th>Places</th><th>Apply by</th><th></th></tr></thead>
+          <tbody>
+            {% for internship in offered %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a>
+                  <div class="tiny muted">{{ internship.organisation }}</div>
+                </td>
+                <td>{{ internship_status_badge(internship) }}</td>
+                <td>{{ internship.interests|length }}</td>
+                <td>{{ internship.seats_left }} of {{ internship.seats }}</td>
+                <td class="tiny muted nowrap">
+                  {{ internship.apply_by.strftime('%d %b %Y') if internship.apply_by else '—' }}
+                </td>
+                <td class="nowrap">
+                  <div class="btn-group">
+                    <a class="btn sm outline" href="{{ url_for('internships.interested', internship_id=internship.id) }}">Interested</a>
+                    <a class="btn sm outline" href="{{ url_for('internships.edit', internship_id=internship.id) }}">Edit</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("You have not offered an internship yet.",
+                     "Even one place, for a few weeks, is worth a great deal to a student here.") }}
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>My interest</h2></div>
+    {% if expressed %}
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Internship</th><th>Organisation</th><th>Status</th><th>Note</th><th>Sent</th></tr></thead>
+          <tbody>
+            {% for row in expressed %}
+              <tr>
+                <td><a href="{{ url_for('internships.detail', internship_id=row.internship_id) }}">{{ row.internship.title }}</a></td>
+                <td class="small">{{ row.internship.organisation }}</td>
+                <td>
+                  <span class="badge {{ 'ok' if row.status == 'accepted' else ('danger' if row.status == 'declined' else 'info') }}">
+                    {{ row.status|title }}
+                  </span>
+                </td>
+                <td class="small">{{ row.offerer_note or '—' }}</td>
+                <td class="tiny muted nowrap">{{ row.created_at.strftime('%d %b %Y') }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {{ empty_state("You have not expressed interest in any internship.") }}
+      <div class="center mt2"><a class="btn" href="{{ url_for('internships.listing') }}">Browse internships</a></div>
+    {% endif %}
+  </div>
+{% endblock %}

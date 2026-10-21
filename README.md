@@ -20,6 +20,23 @@ openings for the juniors, and apply to them.
   department per academic year.
 - **Department pages** — about the college and the department, faculty (current
   and former), news and events, all editable by an administrator.
+- **Internships** — alumni offer training places to current students; the
+  department approves each one; students express interest in a click and the
+  offerer accepts, declines or marks them completed.
+- **Talks and sessions** — a member ticks a box to say they will speak to
+  students and lists their topics; the department schedules a session, and the
+  speaker is notified by portal message every time it changes.
+- **Prominent alumni** — a curated page of graduates the department puts
+  forward, with a citation for each.
+- **Gallery** — albums of photographs from meets and events, uploaded several at
+  a time and resized for the web.
+- **Coordinators** — per department per academic year, and a separate register
+  with a coordinator for every year of admission since the first batch.
+- **Editable page text** — every heading, paragraph and button label on the home
+  page and the member dashboard is editable from the admin area, and can be put
+  back to the shipped wording at any time.
+- **Outward links** — college website, LinkedIn, Instagram, YouTube and Facebook,
+  shown as icons in the header and footer.
 - **College-wide mode** — the portal ships serving Computer Science alone. An
   administrator can open it to the other departments of the college (English,
   Physics, Mathematics, Commerce, Communication Media and History, Economics),
@@ -107,7 +124,7 @@ pytest                      # the whole suite
 pytest tests/test_security.py -v
 ```
 
-126 tests in five files, each running against a fresh in-memory database:
+198 tests across thirteen files, each running against a fresh in-memory database:
 
 | File | Covers |
 | --- | --- |
@@ -117,6 +134,13 @@ pytest tests/test_security.py -v
 | `tests/test_workflows.py` | registration → verification → posting → moderation → application → hire |
 | `tests/test_features.py` | batch browsing, the year range, placements, coordinators, college-wide mode |
 | `tests/test_models.py` | model helpers, password hashing, the portal clock, password policy |
+| `tests/test_prominent.py` | highlighting alumni, ordering, citations, visibility rules |
+| `tests/test_batch_coordinators.py` | the per-year-of-admission register |
+| `tests/test_internships.py` | offering, moderation, interest, places, permissions |
+| `tests/test_talks.py` | willingness, scheduling, notifications, past sessions |
+| `tests/test_gallery.py` | albums, uploads, covers, deletion, image verification |
+| `tests/test_content.py` | editing page text, restoring defaults, escaping |
+| `tests/test_links.py` | outward links, scheme validation, output filtering |
 
 ## Security
 

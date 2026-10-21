@@ -132,13 +132,15 @@ def save_upload(file_storage, kind):
         allowed, folder = cfg["ALLOWED_RESUME_EXTENSIONS"], cfg["RESUME_FOLDER"]
     elif kind == "photo":
         allowed, folder = cfg["ALLOWED_IMAGE_EXTENSIONS"], cfg["PHOTO_FOLDER"]
+    elif kind == "gallery":
+        allowed, folder = cfg["ALLOWED_IMAGE_EXTENSIONS"], cfg["GALLERY_FOLDER"]
     else:
         raise ValueError(f"Unknown upload kind: {kind}")
 
     original = secure_filename(file_storage.filename)
     if not _allowed(original, allowed):
         raise ValueError(f"Allowed file types: {', '.join(sorted(allowed))}")
-    if kind == "photo":
+    if kind in ("photo", "gallery"):
         _require_real_image(file_storage)
 
     ext = original.rsplit(".", 1)[1].lower()
@@ -151,6 +153,8 @@ def save_upload(file_storage, kind):
     if kind == "photo":
         # Re-encoding also drops EXIF, including any GPS co-ordinates.
         _shrink_image(folder / stored)
+    elif kind == "gallery":
+        _shrink_image(folder / stored, max_side=1600)
     return stored
 
 
@@ -189,7 +193,11 @@ def delete_upload(filename, kind):
     if not filename:
         return
     cfg = current_app.config
-    folder = cfg["RESUME_FOLDER"] if kind == "resume" else cfg["PHOTO_FOLDER"]
+    folder = {
+        "resume": cfg["RESUME_FOLDER"],
+        "photo": cfg["PHOTO_FOLDER"],
+        "gallery": cfg["GALLERY_FOLDER"],
+    }.get(kind, cfg["PHOTO_FOLDER"])
     try:
         (folder / filename).unlink(missing_ok=True)
     except OSError:
@@ -259,6 +267,12 @@ def register_template_helpers(app):
     app.jinja_env.filters["nl2br"] = nl2br
     app.jinja_env.filters["timeago"] = timeago
     app.jinja_env.filters["safe_url"] = lambda raw: safe_external_url(raw) or ""
+
+    # `text('home.hero_title')` in a template reads the administrator's copy,
+    # falling back to the text the application ships with.
+    from app.content import site_text
+
+    app.jinja_env.globals["text"] = site_text
 
 
 # --------------------------------------------------------------------------

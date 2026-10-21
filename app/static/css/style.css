@@ -374,6 +374,46 @@ footer.site .legal { border-top: 1px solid rgba(255, 255, 255, .12); margin-top:
 }
 .placement-highlight h2, .placement-highlight h3 { color: var(--accent-ink); }
 
+.sociallinks { display: inline-flex; gap: .4rem; align-items: center; margin-top: .9rem; }
+.sociallinks a {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(255, 255, 255, .1); color: inherit;
+}
+.sociallinks a:hover { background: rgba(255, 255, 255, .2); text-decoration: none; }
+.sociallinks svg {
+  width: 18px; height: 18px; fill: none; stroke: currentColor;
+  stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
+.sociallinks.sm { margin: 0; gap: .2rem; }
+.sociallinks.sm a { width: 26px; height: 26px; border-radius: 6px; }
+.sociallinks.sm svg { width: 15px; height: 15px; }
+.topbar-right { display: inline-flex; align-items: center; gap: .6rem; }
+
+.internship-card { border-left: 3px solid var(--brand-mid); }
+.talk-card { border-left: 3px solid var(--accent); }
+
+/* ------------------------------------------------------------- gallery */
+.album-tile { text-decoration: none; color: inherit; }
+.album-tile:hover { text-decoration: none; border-color: var(--brand-mid); }
+.album-cover {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: var(--radius); background: var(--surface-alt);
+}
+.album-cover-empty {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-faint); font-size: .85rem; border: 1px dashed var(--line-strong);
+}
+.photo-grid {
+  display: grid; gap: .9rem;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.photo { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.photo img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.photo figcaption { padding: .5rem .7rem; font-size: .82rem; color: var(--ink-soft); }
+.admin-photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); }
+.thumb { width: 46px; height: 46px; border-radius: 6px; object-fit: cover; border: 1px solid var(--line); }
+.thumb-empty { display: inline-flex; align-items: center; justify-content: center; color: var(--ink-faint); background: var(--surface-alt); }
 .prominent-card { border-top: 3px solid var(--accent); }
 .prominent-highlight {
   background: linear-gradient(180deg, var(--brand-soft), var(--surface) 60%);

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, social_row %}
+{% block title %}Links{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Outward links</h1>
+    <p class="lede">
+      The college website and social accounts, shown as small icons in the bar at
+      the top of every page and in the footer.
+    </p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="split">
+    <div class="card">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {% for key, label, placeholder, icon in fields %}
+          {{ field(form[key], placeholder=placeholder) }}
+        {% endfor %}
+        <p class="hint">
+          Leave a field empty to hide that icon. Only full http:// or https://
+          addresses are accepted.
+        </p>
+        <div class="form-actions">
+          <button class="btn" type="submit">Save links</button>
+          <a class="btn outline" href="{{ url_for('main.index') }}">View the site</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>Showing now</h3>
+        {% if active %}
+          <ul class="list-plain small">
+            {% for link in active %}
+              <li>
+                <span class="strong">{{ link.label }}</span>
+                <div class="tiny muted" style="word-break:break-all">{{ link.url }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="small muted mb0">No links configured yet.</p>
+        {% endif %}
+      </div>
+      <div class="card" style="background:var(--brand-dark);color:#c3cce4">
+        <h3 style="color:#fff">How they look</h3>
+        <p class="small mb0" style="color:#c3cce4">On the dark bar and footer:</p>
+        {{ social_row(active) }}
+      </div>
+    </aside>
+  </div>
+{% endblock %}

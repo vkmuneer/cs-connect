@@ -92,6 +92,10 @@ def directory():
         query = query.filter(Profile.is_job_provider.is_(True))
     elif role == "hiring":
         query = query.filter(Profile.is_hiring.is_(True))
+    elif role == "speakers":
+        query = query.filter(Profile.offers_expert_talk.is_(True))
+    elif role == "prominent":
+        query = query.filter(Profile.is_featured.is_(True))
 
     page_num = request.args.get("page", 1, type=int)
     pagination = query.order_by(
@@ -302,6 +306,7 @@ def edit_profile():
             "linkedin_url", "github_url", "website_url", "is_job_seeker", "open_to_work",
             "is_job_provider", "is_hiring", "company_name", "company_website",
             "designation_at_company", "is_visible",
+            "offers_expert_talk", "talk_topics", "talk_mode",
         ):
             setattr(profile, field, getattr(form, field).data)
 

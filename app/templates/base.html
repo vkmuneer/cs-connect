@@ -1,3 +1,4 @@
+{% from "macros.html" import social_row %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,10 +15,9 @@
 <div class="topbar">
   <div class="wrap">
     <span>{{ DEPARTMENT_NAME }} · {{ COLLEGE_PLACE }}</span>
-    <span>
-      <a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">College website</a>
-      &nbsp;·&nbsp;
+    <span class="topbar-right">
       <a href="{{ url_for('main.contact') }}">Contact</a>
+      {{ social_row(SOCIAL_LINKS, "sm") }}
     </span>
   </div>
 </div>
@@ -48,11 +48,14 @@
       <a href="{{ url_for('profiles.prominent') }}" class="{{ 'active' if ep == 'profiles.prominent' }}">Prominent</a>
       <a href="{{ url_for('profiles.batches') }}" class="{{ 'active' if ep in ('profiles.batches', 'profiles.batch') }}">Batches</a>
       <a href="{{ url_for('jobs.listing') }}" class="{{ 'active' if ep == 'jobs.listing' }}">Opportunities</a>
+      <a href="{{ url_for('internships.listing') }}" class="{{ 'active' if ep.startswith('internships.') }}">Internships</a>
+      <a href="{{ url_for('main.talks') }}" class="{{ 'active' if ep == 'main.talks' }}">Talks</a>
       <a href="{{ url_for('main.placements') }}" class="{{ 'active' if ep == 'main.placements' }}">Placements</a>
       <a href="{{ url_for('main.coordinators') }}" class="{{ 'active' if ep == 'main.coordinators' }}">Coordinators</a>
       {% if MULTI_DEPARTMENT %}
         <a href="{{ url_for('main.departments') }}" class="{{ 'active' if ep == 'main.departments' }}">Departments</a>
       {% endif %}
+      <a href="{{ url_for('main.gallery') }}" class="{{ 'active' if ep.startswith('main.gallery') }}">Gallery</a>
       <a href="{{ url_for('main.announcements') }}" class="{{ 'active' if ep.startswith('main.announcement') }}">News</a>
 
       <span class="spacer"></span>
@@ -64,7 +67,7 @@
         <a href="{{ url_for('profiles.my_profile') }}" class="{{ 'active' if ep == 'profiles.my_profile' }}">Dashboard</a>
         {% if current_user.is_admin %}
           <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">
-            Admin{% if pending_jobs_count + pending_users_count %} <span class="pill">{{ pending_jobs_count + pending_users_count }}</span>{% endif %}
+            Admin{% set queue = pending_jobs_count + pending_users_count + pending_internships_count %}{% if queue %} <span class="pill">{{ queue }}</span>{% endif %}
           </a>
         {% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}" class="nav-signout">
@@ -124,6 +127,7 @@
           <li><a href="{{ url_for('main.about_department') }}">About the department</a></li>
           <li><a href="{{ url_for('main.faculty') }}">Faculty</a></li>
           <li><a href="{{ url_for('main.announcements') }}">News &amp; events</a></li>
+          <li><a href="{{ url_for('main.gallery') }}">Gallery</a></li>
         </ul>
       </div>
       <div>
@@ -135,6 +139,8 @@
           <li><a href="{{ url_for('main.placements') }}">Placements</a></li>
           <li><a href="{{ url_for('main.coordinators') }}">Coordinators</a></li>
           <li><a href="{{ url_for('jobs.listing') }}">Job board</a></li>
+          <li><a href="{{ url_for('internships.listing') }}">Internships</a></li>
+          <li><a href="{{ url_for('main.talks') }}">Talks &amp; sessions</a></li>
           <li><a href="{{ url_for('profiles.directory', role='hiring') }}">Hiring alumni</a></li>
           <li><a href="{{ url_for('auth.register') }}">Join the network</a></li>
         </ul>
@@ -144,9 +150,9 @@
         <ul>
           <li><a href="mailto:cs@sscollege.ac.in">cs@sscollege.ac.in</a></li>
           <li>+91 483 285 3363</li>
-          <li><a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">sscollege.ac.in</a></li>
           <li><a href="{{ url_for('main.contact') }}">Reach the department</a></li>
         </ul>
+        {{ social_row(SOCIAL_LINKS) }}
       </div>
     </div>
     <div class="legal">

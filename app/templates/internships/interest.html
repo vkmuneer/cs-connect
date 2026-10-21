@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, file_field %}
+{% block title %}Express interest — {{ internship.title }}{% endblock %}
+{% block content %}
+  <div class="crumbs">
+    <a href="{{ url_for('internships.listing') }}">Internships</a> /
+    <a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a> /
+    Express interest
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h1 class="mb1">Express interest</h1>
+      <p class="small muted">
+        {{ internship.title }} · {{ internship.organisation }}
+        {%- if internship.apply_by %} · closes {{ internship.apply_by.strftime('%d %b %Y') }}{% endif %}
+      </p>
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.note, placeholder="Your year of study, what you have built, why this interests you.") }}
+        {% if profile and profile.resume_filename %}
+          <div class="alert alert-info">
+            Your profile resume goes with this — or attach a different one below.
+          </div>
+        {% else %}
+          <div class="alert alert-warning">
+            You have no resume on your profile. Attaching one here helps a great deal.
+          </div>
+        {% endif %}
+        {{ file_field(form.resume, "PDF or Word, up to 8 MB.") }}
+        <div class="form-actions">
+          <button class="btn" type="submit">Express interest</button>
+          <a class="btn outline" href="{{ url_for('internships.detail', internship_id=internship.id) }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+    <aside class="card">
+      <h3>What they will see</h3>
+      <ul class="small" style="padding-left:1.1rem;margin:0">
+        <li>Your name, batch and programme</li>
+        <li>The skills on your profile</li>
+        <li>Your message and resume</li>
+      </ul>
+      <a class="btn outline block mt2" href="{{ url_for('profiles.edit_profile') }}">Update my profile first</a>
+    </aside>
+  </div>
+{% endblock %}

@@ -47,6 +47,17 @@
         </fieldset>
 
         <fieldset class="card">
+          <legend>Talks &amp; sessions</legend>
+          {{ check(form.offers_expert_talk) }}
+          {{ field(form.talk_topics, placeholder="Life after graduation&#10;Getting into data science") }}
+          {{ field(form.talk_mode) }}
+          <p class="hint mb0">
+            The department arranges the date with you — nothing is scheduled without
+            telling you first.
+          </p>
+        </fieldset>
+
+        <fieldset class="card">
           <legend>Portal roles</legend>
           {{ check(form.is_job_seeker) }}
           {{ check(form.open_to_work) }}

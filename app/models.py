@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db, login_manager
@@ -73,6 +73,33 @@ MULTI_DEPARTMENT = "multi_department_enabled"
 FIRST_BATCH_YEAR = "first_batch_year"      # oldest year of admission offered
 FUTURE_YEARS = "future_years"              # how many years ahead to offer
 
+
+class InternshipStatus:
+    PENDING = "pending"
+    APPROVED = "approved"
+    CLOSED = "closed"
+    REJECTED = "rejected"
+
+
+class InterestStatus:
+    EXPRESSED = "expressed"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    COMPLETED = "completed"
+    ALL = [EXPRESSED, ACCEPTED, DECLINED, COMPLETED]
+
+
+INTERNSHIP_MODES = ["On-site", "Remote", "Hybrid"]
+
+TALK_MODES = ["On campus", "Online", "Either"]
+
+
+class TalkStatus:
+    PROPOSED = "proposed"
+    CONFIRMED = "confirmed"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    ALL = [PROPOSED, CONFIRMED, COMPLETED, CANCELLED]
 
 JOB_TYPES = ["Full-time", "Part-time", "Internship", "Contract", "Freelance"]
 WORK_MODES = ["On-site", "Hybrid", "Remote"]
@@ -184,6 +211,11 @@ class Profile(db.Model):
 
     is_visible = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Expert talks: a member declares this themselves.
+    offers_expert_talk = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    talk_topics = db.Column(db.Text)
+    talk_mode = db.Column(db.String(20), default="Either")
+
     # Curated by an administrator: who the department puts forward as a
     # prominent alumnus, and why.
     is_featured = db.Column(db.Boolean, default=False, nullable=False, index=True)
@@ -210,6 +242,20 @@ class Profile(db.Model):
     def initials(self):
         parts = [p for p in (self.user.full_name or "").split() if p]
         return "".join(p[0].upper() for p in parts[:2]) or "?"
+
+    @classmethod
+    def speakers_query(cls):
+        """Members who have offered to give a talk or session to students."""
+        return (
+            cls.query.join(User)
+            .filter(
+                cls.offers_expert_talk.is_(True),
+                cls.is_visible.is_(True),
+                User.is_approved.is_(True),
+                User.is_blocked.is_(False),
+            )
+            .order_by(User.full_name)
+        )
 
     @classmethod
     def featured_query(cls):
@@ -392,6 +438,197 @@ class Application(db.Model):
 
 
 # --------------------------------------------------------------------------
+# Internships offered by alumni to current students
+# --------------------------------------------------------------------------
+internship_skills = db.Table(
+    "internship_skills",
+    db.Column("internship_id", db.Integer,
+              db.ForeignKey("internships.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("skill_id", db.Integer,
+              db.ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Internship(db.Model):
+    """A training place an alumnus offers to students of the department."""
+    __tablename__ = "internships"
+
+    id = db.Column(db.Integer, primary_key=True)
+    offered_by_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+
+    title = db.Column(db.String(160), nullable=False)
+    organisation = db.Column(db.String(160), nullable=False)
+    location = db.Column(db.String(120))
+    mode = db.Column(db.String(20), default="On-site", nullable=False, index=True)
+
+    description = db.Column(db.Text, nullable=False)
+    learning_outcomes = db.Column(db.Text)
+    eligibility = db.Column(db.String(400))
+
+    duration_weeks = db.Column(db.Integer)
+    seats = db.Column(db.Integer, default=1, nullable=False)
+    is_paid = db.Column(db.Boolean, default=False, nullable=False)
+    stipend = db.Column(db.String(120))
+
+    starts_from = db.Column(db.Date)
+    apply_by = db.Column(db.Date, index=True)
+
+    status = db.Column(db.String(20), default=InternshipStatus.PENDING,
+                       nullable=False, index=True)
+    rejection_note = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    offered_by = db.relationship("User", backref=db.backref(
+        "internships_offered", cascade="all, delete-orphan", passive_deletes=True,
+    ))
+    skills = db.relationship("Skill", secondary=internship_skills, lazy="selectin")
+    interests = db.relationship(
+        "InternshipInterest", back_populates="internship",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+
+    @property
+    def is_expired(self):
+        from app.utils import portal_today
+
+        return bool(self.apply_by) and self.apply_by < portal_today()
+
+    @property
+    def is_open(self):
+        return self.status == InternshipStatus.APPROVED and not self.is_expired
+
+    @property
+    def seats_left(self):
+        taken = len([i for i in self.interests if i.status == InterestStatus.ACCEPTED])
+        return max(0, (self.seats or 1) - taken)
+
+    @property
+    def duration_label(self):
+        if not self.duration_weeks:
+            return "Flexible"
+        weeks = self.duration_weeks
+        if weeks % 4 == 0 and weeks >= 4:
+            months = weeks // 4
+            return f"{months} month{'s' if months > 1 else ''}"
+        return f"{weeks} week{'s' if weeks > 1 else ''}"
+
+    def interest_from(self, user):
+        if not user or not user.is_authenticated:
+            return None
+        return InternshipInterest.query.filter_by(
+            internship_id=self.id, student_id=user.id
+        ).first()
+
+    def __repr__(self):
+        return f"<Internship {self.title} @ {self.organisation}>"
+
+
+class InternshipInterest(db.Model):
+    """A student putting their hand up for an internship."""
+    __tablename__ = "internship_interests"
+    __table_args__ = (
+        db.UniqueConstraint("internship_id", "student_id", name="uq_interest_once"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    internship_id = db.Column(
+        db.Integer, db.ForeignKey("internships.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    student_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+
+    note = db.Column(db.Text)
+    resume_filename = db.Column(db.String(255))
+    status = db.Column(db.String(20), default=InterestStatus.EXPRESSED,
+                       nullable=False, index=True)
+    offerer_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    internship = db.relationship("Internship", back_populates="interests")
+    student = db.relationship("User", backref=db.backref(
+        "internship_interests", cascade="all, delete-orphan", passive_deletes=True,
+    ))
+
+    def __repr__(self):
+        return f"<InternshipInterest {self.internship_id} {self.student_id}>"
+
+
+# --------------------------------------------------------------------------
+# Expert talks and sessions by alumni
+# --------------------------------------------------------------------------
+class TalkSession(db.Model):
+    """A talk or session by an alumnus, scheduled by the department."""
+    __tablename__ = "talk_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    speaker_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    arranged_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    title = db.Column(db.String(200), nullable=False)
+    topic = db.Column(db.Text)
+    mode = db.Column(db.String(20), default="On campus", nullable=False)
+    venue = db.Column(db.String(200))        # a room, or a meeting link
+    audience = db.Column(db.String(200))     # e.g. Final-year B.Sc and M.Sc
+
+    scheduled_for = db.Column(db.DateTime, index=True)
+    duration_minutes = db.Column(db.Integer, default=60)
+
+    status = db.Column(db.String(20), default=TalkStatus.PROPOSED, nullable=False, index=True)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    speaker = db.relationship("User", foreign_keys=[speaker_id], backref=db.backref(
+        "talks", cascade="all, delete-orphan", passive_deletes=True,
+    ))
+    arranged_by = db.relationship("User", foreign_keys=[arranged_by_id])
+
+    @property
+    def is_past(self):
+        if not self.scheduled_for:
+            return False
+        when = self.scheduled_for
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return when < datetime.now(timezone.utc)
+
+    @property
+    def is_upcoming(self):
+        return (
+            self.status in (TalkStatus.PROPOSED, TalkStatus.CONFIRMED)
+            and not self.is_past
+        )
+
+    @property
+    def when_label(self):
+        if not self.scheduled_for:
+            return "Date to be fixed"
+        return self.scheduled_for.strftime("%d %B %Y, %H:%M")
+
+    @classmethod
+    def upcoming(cls, limit=None):
+        query = (
+            cls.query.filter(cls.status.in_([TalkStatus.PROPOSED, TalkStatus.CONFIRMED]))
+            .filter(or_(cls.scheduled_for.is_(None),
+                        cls.scheduled_for >= datetime.now(timezone.utc)))
+            .order_by(cls.scheduled_for.asc().nullslast())
+        )
+        return query.limit(limit).all() if limit else query.all()
+
+    def __repr__(self):
+        return f"<TalkSession {self.title}>"
+
+
+# --------------------------------------------------------------------------
 # Messaging between members
 # --------------------------------------------------------------------------
 class Message(db.Model):
@@ -429,6 +666,82 @@ class Message(db.Model):
 
     def __repr__(self):
         return f"<Message {self.sender_id}->{self.recipient_id}>"
+
+
+# --------------------------------------------------------------------------
+# Image gallery
+# --------------------------------------------------------------------------
+class GalleryAlbum(db.Model):
+    """A set of photographs — an alumni meet, a workshop, a farewell."""
+    __tablename__ = "gallery_albums"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(160), nullable=False)
+    slug = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    description = db.Column(db.Text)
+    event_date = db.Column(db.Date, index=True)
+    is_published = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    sort_order = db.Column(db.Integer, default=100, nullable=False)
+    cover_image_id = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    images = db.relationship(
+        "GalleryImage", back_populates="album", cascade="all, delete-orphan",
+        passive_deletes=True, order_by="GalleryImage.sort_order, GalleryImage.id",
+    )
+
+    @staticmethod
+    def slugify(title):
+        cleaned = "".join(
+            ch.lower() if (ch.isalnum() or ch.isspace()) else " " for ch in (title or "")
+        )
+        slug = "-".join(cleaned.split())[:80]
+        return slug or "album"
+
+    @property
+    def cover(self):
+        if self.cover_image_id:
+            for image in self.images:
+                if image.id == self.cover_image_id:
+                    return image
+        return self.images[0] if self.images else None
+
+    @property
+    def image_count(self):
+        return len(self.images)
+
+    @classmethod
+    def published(cls):
+        return (
+            cls.query.filter_by(is_published=True)
+            .order_by(cls.sort_order, cls.event_date.desc().nullslast(), cls.title)
+            .all()
+        )
+
+    def __repr__(self):
+        return f"<GalleryAlbum {self.slug}>"
+
+
+class GalleryImage(db.Model):
+    __tablename__ = "gallery_images"
+
+    id = db.Column(db.Integer, primary_key=True)
+    album_id = db.Column(
+        db.Integer, db.ForeignKey("gallery_albums.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    filename = db.Column(db.String(255), nullable=False)
+    caption = db.Column(db.String(300))
+    sort_order = db.Column(db.Integer, default=100, nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    album = db.relationship("GalleryAlbum", back_populates="images")
+    uploaded_by = db.relationship("User")
+
+    def __repr__(self):
+        return f"<GalleryImage {self.filename}>"
 
 
 # --------------------------------------------------------------------------
@@ -693,7 +1006,8 @@ class Setting(db.Model):
     __tablename__ = "settings"
 
     key = db.Column(db.String(60), primary_key=True)
-    value = db.Column(db.String(255), nullable=False, default="")
+    # Text, not a short string: page copy lives here as well as flags.
+    value = db.Column(db.Text, nullable=False, default="")
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
     @classmethod
@@ -707,6 +1021,13 @@ class Setting(db.Model):
         if raw is None:
             return default
         return raw in ("1", "true", "yes", "on")
+
+    @classmethod
+    def clear(cls, key):
+        row = db.session.get(cls, key)
+        if row is not None:
+            db.session.delete(row)
+        return row
 
     @classmethod
     def put(cls, key, value):

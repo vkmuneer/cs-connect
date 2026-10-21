@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "macros.html" import avatar, job_status_badge, empty_state %}
-{% block title %}My dashboard{% endblock %}
+{% block title %}{{ text('dashboard.title') }}{% endblock %}
 {% block content %}
   <div class="page-head">
-    <h1>My dashboard</h1>
-    <p class="lede">Your profile, your postings and everything you have applied to.</p>
+    <h1>{{ text('dashboard.title') }}</h1>
+    <p class="lede">{{ text('dashboard.lede') }}</p>
   </div>
 
   <div class="split left">
@@ -27,7 +27,7 @@
       </div>
 
       <div class="card">
-        <h3>Profile completeness</h3>
+        <h3>{{ text('dashboard.completeness_title') }}</h3>
         {% set checks = [
           ('Headline', profile.headline),
           ('About', profile.about),
@@ -57,7 +57,7 @@
 
       <div class="card">
         <div class="card-head">
-          <h2>My postings</h2>
+          <h2>{{ text('dashboard.postings_title') }}</h2>
           <a class="btn sm" href="{{ url_for('jobs.create') }}">Post an opportunity</a>
         </div>
         {% if my_jobs %}
@@ -82,13 +82,13 @@
             </table>
           </div>
         {% else %}
-          {{ empty_state("You have not posted anything yet.", "Know of an opening that suits our graduates? List it here.") }}
+          {{ empty_state(text('dashboard.empty_postings'), "Know of an opening that suits our graduates? List it here.") }}
         {% endif %}
       </div>
 
       <div class="card">
         <div class="card-head">
-          <h2>My applications</h2>
+          <h2>{{ text('dashboard.applications_title') }}</h2>
           <a class="small" href="{{ url_for('jobs.matches') }}">See roles matching my skills →</a>
         </div>
         {% if my_applications %}
@@ -108,13 +108,13 @@
             </table>
           </div>
         {% else %}
-          {{ empty_state("No applications yet.", "Browse the job board and apply in one click.") }}
+          {{ empty_state(text('dashboard.empty_applications'), "Browse the job board and apply in one click.") }}
         {% endif %}
       </div>
 
       {% if received %}
         <div class="card">
-          <div class="card-head"><h2>Recent applications to my postings</h2></div>
+          <div class="card-head"><h2>{{ text('dashboard.received_title') }}</h2></div>
           <ul class="list-plain">
             {% for app in received %}
               <li class="row between">

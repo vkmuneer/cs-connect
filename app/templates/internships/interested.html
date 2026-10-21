@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, empty_state %}
+{% block title %}Interested students — {{ internship.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('internships.listing') }}">Internships</a> /
+      <a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a> /
+      Interested
+    </div>
+    <div class="row between">
+      <div>
+        <h1>Interested students</h1>
+        <p class="lede">
+          {{ internship.title }} · {{ internship.organisation }} —
+          {{ interests|length }} student{{ '' if interests|length == 1 else 's' }},
+          {{ internship.seats_left }} of {{ internship.seats }} place{{ '' if internship.seats == 1 else 's' }} left
+        </p>
+      </div>
+      <a class="btn outline" href="{{ url_for('internships.detail', internship_id=internship.id) }}">Back</a>
+    </div>
+  </div>
+
+  {% if interests %}
+    <div class="stack">
+      {% for row in interests %}
+        <div class="card">
+          <div class="row between">
+            <div class="row">
+              {{ avatar(row.student) }}
+              <div>
+                <a class="strong" href="{{ url_for('profiles.view_profile', user_id=row.student_id) }}">
+                  {{ row.student.full_name }}
+                </a>
+                {% if row.student.profile %}
+                  <div class="tiny muted">
+                    {{ row.student.profile.programme }} · Batch {{ row.student.profile.display_batch }}
+                  </div>
+                {% endif %}
+                <div class="tiny muted">Expressed interest {{ row.created_at|timeago }}</div>
+              </div>
+            </div>
+            <div class="right">
+              <span class="badge {{ 'ok' if row.status == 'accepted' else ('danger' if row.status == 'declined' else 'info') }}">
+                {{ row.status|title }}
+              </span>
+              <div class="btn-group mt1">
+                {% if row.resume_filename %}
+                  <a class="btn sm outline" href="{{ url_for('profiles.download_resume', user_id=row.student_id) }}">Resume</a>
+                {% endif %}
+                <a class="btn sm outline" href="{{ url_for('messages.compose', user_id=row.student_id) }}">Message</a>
+              </div>
+            </div>
+          </div>
+
+          {% if row.student.profile and row.student.profile.skills %}
+            <div class="chips mt2">
+              {% for skill in row.student.profile.skills[:8] %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+            </div>
+          {% endif %}
+
+          {% if row.note %}
+            <div class="card tight flat mt2">
+              <div class="tiny muted mb1">From the student</div>
+              <p class="small mb0">{{ row.note|nl2br }}</p>
+            </div>
+          {% endif %}
+
+          <form class="mt2" method="post" action="{{ url_for('internships.update_interest', interest_id=row.id) }}">
+            {{ status_form.hidden_tag() }}
+            <div class="filterbar">
+              <div class="field">
+                <label for="status-{{ row.id }}">Status</label>
+                <select id="status-{{ row.id }}" name="status">
+                  {% for value, label in status_form.status.choices %}
+                    <option value="{{ value }}"{{ ' selected' if value == row.status else '' }}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field" style="grid-column: span 2">
+                <label for="note-{{ row.id }}">Note to the student</label>
+                <input id="note-{{ row.id }}" type="text" name="offerer_note"
+                       value="{{ row.offerer_note or '' }}" placeholder="Optional">
+              </div>
+              <div class="field">
+                <label class="sr-only">Update</label>
+                <button class="btn block" type="submit">Update</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No student has expressed interest yet.",
+                   "Interest lands here, with the student's profile and resume.") }}
+  {% endif %}
+{% endblock %}

@@ -77,15 +77,21 @@ def _register_security(app):
         if current_user.is_authenticated and not request.path.startswith("/static/"):
             response.headers.setdefault("Cache-Control", "no-store, max-age=0")
 
-        # Uploaded files are user content: never let a browser render them inline.
+        # Uploaded files are user content. Gallery and profile images are
+        # verified as real images on upload and re-encoded, so they may render
+        # inline; anything else (resumes above all) is forced to download.
         if request.path.startswith("/static/uploads/"):
-            response.headers["Content-Disposition"] = "attachment"
             response.headers["X-Content-Type-Options"] = "nosniff"
+            inline = request.path.startswith(
+                ("/static/uploads/gallery/", "/static/uploads/photos/")
+            )
+            if not inline:
+                response.headers["Content-Disposition"] = "attachment"
         return response
 
 
 def _ensure_directories(app):
-    for key in ("UPLOAD_FOLDER", "RESUME_FOLDER", "PHOTO_FOLDER"):
+    for key in ("UPLOAD_FOLDER", "RESUME_FOLDER", "PHOTO_FOLDER", "GALLERY_FOLDER"):
         app.config[key].mkdir(parents=True, exist_ok=True)
     os.makedirs(app.instance_path, exist_ok=True)
 
@@ -93,6 +99,7 @@ def _ensure_directories(app):
 def _register_blueprints(app):
     from app.blueprints.admin import admin_bp
     from app.blueprints.auth import auth_bp
+    from app.blueprints.internships import internships_bp
     from app.blueprints.jobs import jobs_bp
     from app.blueprints.main import main_bp
     from app.blueprints.messages import messages_bp
@@ -102,6 +109,7 @@ def _register_blueprints(app):
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(profiles_bp, url_prefix="/alumni")
     app.register_blueprint(jobs_bp, url_prefix="/jobs")
+    app.register_blueprint(internships_bp, url_prefix="/internships")
     app.register_blueprint(messages_bp, url_prefix="/messages")
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
@@ -145,12 +153,15 @@ def _register_context(app):
         unread = 0
         pending_jobs = 0
         pending_users = 0
+        pending_internships = 0
         if current_user.is_authenticated:
             unread = Message.unread_count(current_user.id)
             if current_user.is_admin:
-                from app.models import Job, JobStatus, User
+                from app.models import Internship, InternshipStatus, Job, JobStatus, User
                 pending_jobs = Job.query.filter_by(status=JobStatus.PENDING).count()
                 pending_users = User.query.filter_by(is_approved=False, is_blocked=False).count()
+                pending_internships = Internship.query.filter_by(
+                    status=InternshipStatus.PENDING).count()
         multi_department = False
         departments = []
         try:
@@ -160,7 +171,15 @@ def _register_context(app):
         except Exception:  # database not initialised yet
             pass
 
+        from app.content import social_links
+
+        try:
+            links = social_links()
+        except Exception:
+            links = []
+
         return {
+            "SOCIAL_LINKS": links,
             "MULTI_DEPARTMENT": multi_department,
             "ACTIVE_DEPARTMENTS": departments,
             "COLLEGE_NAME": "Sullamussalam Science College",
@@ -171,6 +190,7 @@ def _register_context(app):
             "current_year": datetime.now(timezone.utc).year,
             "unread_messages": unread,
             "pending_jobs_count": pending_jobs,
+            "pending_internships_count": pending_internships,
             "pending_users_count": pending_users,
         }
 

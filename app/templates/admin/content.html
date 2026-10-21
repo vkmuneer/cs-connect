@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Page text{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Page text</h1>
+        <p class="lede">
+          Every heading, paragraph and button label on the home page and the member
+          dashboard. Clear a field to go back to the wording the portal ships with.
+        </p>
+      </div>
+      <a class="btn outline" href="{{ url_for('main.index') }}">View the home page</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for group, entries in groups.items() %}
+      <fieldset class="card">
+        <legend>{{ group }}</legend>
+        {% for entry in entries %}
+          <div class="field">
+            <label for="{{ entry.key }}">
+              {{ entry.label }}
+              {% if not entry.is_default %}<span class="badge brand">edited</span>{% endif %}
+            </label>
+            {% if entry.kind == 'block' %}
+              <textarea id="{{ entry.key }}" name="{{ entry.key }}" rows="3">{{ entry.value }}</textarea>
+            {% else %}
+              <input id="{{ entry.key }}" type="text" name="{{ entry.key }}" value="{{ entry.value }}">
+            {% endif %}
+            {% if not entry.is_default %}
+              <div class="hint">Default: {{ entry.default }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+
+    <div class="card">
+      <div class="row between">
+        <div>
+          <button class="btn" type="submit">Save all text</button>
+          <span class="small muted" style="margin-left:.6rem">
+            Changes appear on the site immediately.
+          </span>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card mt3">
+    <div class="row between">
+      <div>
+        <h3 class="mb0">Restore every default</h3>
+        <p class="small muted mb0">
+          Drops all of your wording and goes back to what the portal ships with.
+        </p>
+      </div>
+      <form method="post" action="{{ url_for('admin.reset_content') }}"
+            data-confirm="Restore every piece of text to its default wording?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn danger" type="submit">Restore defaults</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% from "macros_internship.html" import internship_status_badge %}
+{% block title %}Internships{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Internships</h1>
+        <p class="lede">Training places offered by alumni to the department's students.</p>
+      </div>
+      <a class="btn outline" href="{{ url_for('internships.listing') }}">Public listing</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="tabs">
+    {% for value, label in [('pending', 'Awaiting approval'), ('approved', 'Listed'),
+                            ('rejected', 'Rejected'), ('closed', 'Closed'), ('all', 'All')] %}
+      <a class="{{ 'active' if scope == value }}" href="{{ url_for('admin.internships', scope=value) }}">
+        {{ label }} ({{ counts[value] }})
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if internships %}
+    <div class="stack">
+      {% for internship in internships %}
+        <div class="card">
+          <div class="row between">
+            <div>
+              <h3 class="mb0">
+                <a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a>
+              </h3>
+              <div class="small muted">
+                {{ internship.organisation }}{% if internship.location %} · {{ internship.location }}{% endif %}
+                · {{ internship.mode }} · {{ internship.duration_label }}
+                · {{ internship.stipend if internship.is_paid else 'Unpaid' }}
+              </div>
+              <div class="tiny muted mt1">
+                Offered by
+                <a href="{{ url_for('profiles.view_profile', user_id=internship.offered_by_id) }}">
+                  {{ internship.offered_by.full_name }}
+                </a>
+                · {{ internship.created_at|timeago }}
+                · {{ internship.interests|length }} interested
+                · {{ internship.seats }} place{{ '' if internship.seats == 1 else 's' }}
+              </div>
+            </div>
+            <div class="right">
+              {{ internship_status_badge(internship) }}
+              <div class="btn-group mt2">
+                {% if internship.status != 'approved' %}
+                  {{ confirm_button(confirm_form, url_for('admin.approve_internship', internship_id=internship.id),
+                                    'Approve', 'btn sm ok', 'List this internship for students?') }}
+                {% endif %}
+                <a class="btn sm outline" href="{{ url_for('internships.edit', internship_id=internship.id) }}">Edit</a>
+                {{ confirm_button(confirm_form, url_for('admin.delete_internship', internship_id=internship.id),
+                                  'Delete', 'btn sm danger', 'Delete this internship and its interest records?') }}
+              </div>
+            </div>
+          </div>
+
+          <p class="small mt2">{{ internship.description|truncate(260) }}</p>
+
+          {% if internship.status != 'rejected' %}
+            <form class="mt1" method="post" action="{{ url_for('admin.reject_internship', internship_id=internship.id) }}">
+              {{ moderation_form.hidden_tag() }}
+              <div class="filterbar">
+                <div class="field" style="grid-column: span 3">
+                  <label for="note-{{ internship.id }}">Reject with a reason (sent to the alumnus)</label>
+                  <input id="note-{{ internship.id }}" type="text" name="rejection_note"
+                         placeholder="e.g. Please add what the student will actually work on">
+                </div>
+                <div class="field">
+                  <label class="sr-only">Reject</label>
+                  <button class="btn block outline" type="submit">Reject</button>
+                </div>
+              </div>
+            </form>
+          {% elif internship.rejection_note %}
+            <p class="small muted mb0">Rejected: {{ internship.rejection_note }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No internships in this view.") }}
+  {% endif %}
+{% endblock %}

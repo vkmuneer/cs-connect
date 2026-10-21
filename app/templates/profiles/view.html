@@ -34,6 +34,7 @@
             <span class="badge gold">{{ profile.featured_title or 'Prominent alumnus' }}</span>
           {% endif %}
           {% if profile.placements %}<span class="badge ok">Placed via {{ SITE_NAME }}</span>{% endif %}
+          {% if profile.offers_expert_talk %}<span class="badge brand">Available for talks</span>{% endif %}
           {% if profile.open_to_work %}<span class="badge ok">Open to work</span>{% endif %}
           {% if profile.is_hiring %}<span class="badge gold">Hiring</span>{% endif %}
           {% if profile.is_job_provider %}<span class="badge brand">Job provider</span>{% endif %}
@@ -100,6 +101,23 @@
           {% if profile.location %}<dt>Location</dt><dd>{{ profile.location }}</dd>{% endif %}
         </dl>
       </div>
+
+      {% if profile.offers_expert_talk %}
+        <div class="card">
+          <h2>Talks &amp; sessions</h2>
+          <p class="small muted">
+            Available for a session with students — {{ profile.talk_mode or 'Either' }}.
+          </p>
+          {% if profile.talk_topics %}
+            <p class="mb0">{{ profile.talk_topics|nl2br }}</p>
+          {% endif %}
+          {% if current_user.is_authenticated and current_user.is_admin %}
+            <a class="btn outline sm mt2" href="{{ url_for('admin.edit_talk', speaker=member.id) }}">
+              Schedule a session
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
 
       {% if profile.skills %}
         <div class="card">

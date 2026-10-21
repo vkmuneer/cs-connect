@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}Gallery{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Gallery</div>
+    <h1>Gallery</h1>
+    <p class="lede">
+      Meets, workshops, farewells and the ordinary days in between — the
+      {{ DEPARTMENT_NAME }} in pictures.
+    </p>
+  </div>
+
+  {% if albums %}
+    <div class="grid cols-3">
+      {% for album in albums %}
+        <a class="tile album-tile" href="{{ url_for('main.gallery_album', slug=album.slug) }}">
+          {% if album.cover %}
+            <img class="album-cover"
+                 src="{{ url_for('static', filename='uploads/gallery/' ~ album.cover.filename) }}"
+                 alt="{{ album.title }}" loading="lazy">
+          {% else %}
+            <div class="album-cover album-cover-empty">No photographs yet</div>
+          {% endif %}
+          <h3 class="mb0">{{ album.title }}</h3>
+          <div class="tiny muted">
+            {% if album.event_date %}{{ album.event_date.strftime('%d %B %Y') }} · {% endif %}
+            {{ album.image_count }} photo{{ '' if album.image_count == 1 else 's' }}
+          </div>
+          {% if album.description %}
+            <p class="small mb0">{{ album.description|truncate(110) }}</p>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No albums published yet.",
+                   "Photographs from department and alumni events will appear here.") }}
+  {% endif %}
+{% endblock %}

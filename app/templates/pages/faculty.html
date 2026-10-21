@@ -5,7 +5,10 @@
   <div class="page-head">
     <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Faculty</div>
     <h1>Faculty</h1>
-    <p class="lede">The teachers of the {{ DEPARTMENT_NAME }}.</p>
+    <p class="lede">
+      The teachers of the P.G &amp; Research Department of Computer Science. Profiles
+      are maintained on the <a href="{{ COLLEGE_URL }}" target="_blank" rel="noopener">college website</a>.
+    </p>
   </div>
 
   <div class="tabs">
@@ -31,9 +34,17 @@
           </div>
           {% if member.qualification %}<div class="small"><span class="muted">Qualification:</span> {{ member.qualification }}</div>{% endif %}
           {% if member.specialization %}<div class="small"><span class="muted">Specialisation:</span> {{ member.specialization }}</div>{% endif %}
+          {% if member.email %}
+            <div class="small"><a href="mailto:{{ member.email }}">{{ member.email }}</a></div>
+          {% endif %}
+          {% if member.phone %}<div class="small muted">{{ member.phone }}</div>{% endif %}
           <div class="foot">
             <span>{{ member.tenure }}</span>
-            {% if member.email %}<a href="mailto:{{ member.email }}">{{ member.email }}</a>{% endif %}
+            {% if member.profile_url %}
+              <a href="{{ member.profile_url|safe_url }}" target="_blank" rel="noopener">
+                Full profile →
+              </a>
+            {% endif %}
           </div>
         </div>
       {% endfor %}

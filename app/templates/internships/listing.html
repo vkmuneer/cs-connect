@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "macros_internship.html" import internship_card %}
+{% from "macros.html" import pagination as pager, empty_state %}
+{% block title %}Internships{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs"><a href="{{ url_for('main.index') }}">Home</a> / Internships</div>
+    <div class="row between">
+      <div>
+        <h1>Internships for our students</h1>
+        <p class="lede">
+          Training places offered by alumni to the current students of the
+          {{ DEPARTMENT_NAME }} — approved by the department before they appear here.
+        </p>
+      </div>
+      <a class="btn gold" href="{{ url_for('internships.create') }}">Offer an internship</a>
+    </div>
+  </div>
+
+  <form class="card mb3" method="get">
+    <div class="filterbar">
+      <div class="field">
+        <label for="q">Search</label>
+        <input id="q" type="search" name="q" value="{{ q }}" placeholder="Title, organisation, keyword…">
+      </div>
+      <div class="field">
+        <label for="mode">Mode</label>
+        <select id="mode" name="mode">
+          <option value="">All modes</option>
+          {% for option in ['On-site', 'Remote', 'Hybrid'] %}
+            <option value="{{ option }}"{{ ' selected' if mode == option else '' }}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="paid">Stipend</label>
+        <select id="paid" name="paid">
+          <option value="">Paid or unpaid</option>
+          <option value="1"{{ ' selected' if paid == '1' else '' }}>Paid only</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="sr-only">Apply</label>
+        <button class="btn block" type="submit">Filter</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="split">
+    <div>
+      <div class="row between mb2">
+        <span class="small muted">
+          {{ pagination.total }} internship{{ '' if pagination.total == 1 else 's' }} listed
+        </span>
+        {% if current_user.is_authenticated %}
+          <a class="small" href="{{ url_for('internships.mine') }}">My internships →</a>
+        {% endif %}
+      </div>
+      {% if pagination.items %}
+        <div class="grid cols-2">
+          {% for internship in pagination.items %}{{ internship_card(internship) }}{% endfor %}
+        </div>
+        {% set qargs = request.args.to_dict() %}
+        {% set _ = qargs.pop('page', None) %}
+        {{ pager(pagination, 'internships.listing', **qargs) }}
+      {% else %}
+        {{ empty_state("No internships listed yet.",
+                       "Alumni offers appear here once the department approves them.") }}
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>For students</h3>
+        <ul class="small" style="padding-left:1.1rem;margin:0">
+          <li>Express interest in one click — your profile and resume go with it.</li>
+          <li>The alumnus offering the place decides, and you are notified.</li>
+          <li>Keep your skills up to date: that is what they look at first.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>For alumni</h3>
+        <p class="small">
+          A few weeks of your team's time can change a student's trajectory. Offer
+          a place, state plainly what they will learn, and the department will
+          handle the rest.
+        </p>
+        <a class="btn outline block" href="{{ url_for('internships.create') }}">Offer an internship</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}

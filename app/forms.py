@@ -1,6 +1,6 @@
 """WTForms definitions."""
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileAllowed, FileField
+from flask_wtf.file import FileAllowed, FileField, MultipleFileField
 from wtforms import (
     BooleanField, DateField, DecimalField, EmailField, HiddenField, IntegerField,
     PasswordField, SelectField, StringField, SubmitField, TextAreaField, URLField,
@@ -10,7 +10,10 @@ from wtforms.validators import (
     Regexp,
 )
 
-from app.models import JOB_TYPES, WORK_MODES, ApplicationStatus, CoordinatorRole, Programme
+from app.models import (
+    INTERNSHIP_MODES, JOB_TYPES, TALK_MODES, WORK_MODES, ApplicationStatus,
+    CoordinatorRole, InterestStatus, Programme, TalkStatus,
+)
 from app.utils import SafeURL, StrongPassword, portal_today
 
 PROGRAMME_CHOICES = [(p, p) for p in Programme.ALL]
@@ -136,6 +139,14 @@ class ProfileForm(FlaskForm):
     company_website = URLField("Company website", validators=[Optional(), SafeURL(), Length(max=255)])
     designation_at_company = StringField("Your role there", validators=[Optional(), Length(max=120)])
 
+    offers_expert_talk = BooleanField("I am willing to give a talk or session to students")
+    talk_topics = TextAreaField(
+        "Topics I can speak on", validators=[Optional(), Length(max=2000)],
+        description="One per line — e.g. Life after graduation, Getting into data science",
+    )
+    talk_mode = SelectField("How I can deliver it", choices=[(m, m) for m in TALK_MODES],
+                            validators=[Optional()])
+
     is_visible = BooleanField("List me in the alumni directory")
     submit = SubmitField("Save profile")
 
@@ -216,6 +227,78 @@ class ApplicationForm(FlaskForm):
     submit = SubmitField("Submit application")
 
 
+class InternshipForm(FlaskForm):
+    """An alumnus offering a training place to current students."""
+    title = StringField("Internship title", validators=[DataRequired(), Length(max=160)])
+    organisation = StringField("Organisation", validators=[DataRequired(), Length(max=160)])
+    location = StringField("Location", validators=[Optional(), Length(max=120)])
+    mode = SelectField("Mode", choices=[(m, m) for m in INTERNSHIP_MODES],
+                       validators=[DataRequired()])
+
+    description = TextAreaField(
+        "What the intern will do", validators=[DataRequired(), Length(min=30, max=6000)],
+    )
+    learning_outcomes = TextAreaField(
+        "What they will learn", validators=[Optional(), Length(max=4000)],
+        description="One point per line.",
+    )
+    eligibility = StringField(
+        "Who can apply", validators=[Optional(), Length(max=400)],
+        description="e.g. Final-year B.Sc or any M.Sc student",
+    )
+    skills = StringField(
+        "Skills expected", validators=[Optional(), Length(max=1000)],
+        description="Comma separated — helps students judge the fit.",
+    )
+
+    duration_weeks = IntegerField(
+        "Duration (weeks)", validators=[Optional(), NumberRange(min=1, max=104)],
+    )
+    seats = IntegerField("Places offered", default=1,
+                         validators=[Optional(), NumberRange(min=1, max=99)])
+    is_paid = BooleanField("This internship is paid")
+    stipend = StringField("Stipend", validators=[Optional(), Length(max=120)],
+                          description="e.g. ₹10,000 per month")
+    starts_from = DateField("Starts from", validators=[Optional()])
+    apply_by = DateField("Last date to express interest", validators=[Optional()])
+    submit = SubmitField("Submit internship")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        ok = True
+        if self.apply_by.data and self.apply_by.data < portal_today():
+            self.apply_by.errors.append("That date has already passed.")
+            ok = False
+        if (self.starts_from.data and self.apply_by.data
+                and self.starts_from.data < self.apply_by.data):
+            self.starts_from.errors.append("The start date cannot be before the closing date.")
+            ok = False
+        if self.is_paid.data and not self.stipend.data:
+            self.stipend.errors.append("Say what the stipend is, or untick “paid”.")
+            ok = False
+        return ok
+
+
+class InternshipInterestForm(FlaskForm):
+    note = TextAreaField(
+        "Message to the offerer", validators=[Optional(), Length(max=2000)],
+        description="Your year, what you have built, and why this interests you.",
+    )
+    resume = FileField(
+        "Attach a resume (optional — your profile resume is used otherwise)",
+        validators=[FileAllowed(["pdf", "doc", "docx"], "PDF or Word documents only.")],
+    )
+    submit = SubmitField("Express interest")
+
+
+class InterestStatusForm(FlaskForm):
+    status = SelectField("Status", choices=[(s, s.title()) for s in InterestStatus.ALL],
+                         validators=[DataRequired()])
+    offerer_note = TextAreaField("Note to the student", validators=[Optional(), Length(max=2000)])
+    submit = SubmitField("Update")
+
+
 class ApplicationStatusForm(FlaskForm):
     status = SelectField(
         "Status", choices=[(s, s.title()) for s in ApplicationStatus.ALL], validators=[DataRequired()],
@@ -247,7 +330,9 @@ class DirectoryFilterForm(FlaskForm):
     skill = StringField("Skill", validators=[Optional(), Length(max=60)])
     role = SelectField(
         "Showing",
-        choices=[("", "Everyone"), ("seekers", "Job seekers"), ("providers", "Job providers"), ("hiring", "Currently hiring")],
+        choices=[("", "Everyone"), ("seekers", "Job seekers"), ("providers", "Job providers"),
+                 ("hiring", "Currently hiring"), ("speakers", "Available for talks"),
+                 ("prominent", "Prominent alumni")],
         validators=[Optional()],
     )
     submit = SubmitField("Filter")
@@ -378,6 +463,86 @@ class CoordinatorForm(FlaskForm):
             )
             return False
         return True
+
+
+class TalkSessionForm(FlaskForm):
+    """The department scheduling a talk by an alumnus."""
+    speaker = SelectField("Speaker", choices=[], validators=[DataRequired()],
+                          validate_choice=False)
+    title = StringField("Title", validators=[DataRequired(), Length(max=200)])
+    topic = TextAreaField("What it covers", validators=[Optional(), Length(max=4000)])
+    mode = SelectField("Mode", choices=[(m, m) for m in TALK_MODES[:2]],
+                       validators=[DataRequired()])
+    venue = StringField(
+        "Venue or meeting link", validators=[Optional(), Length(max=200)],
+        description="A room on campus, or the link for an online session.",
+    )
+    audience = StringField("Audience", validators=[Optional(), Length(max=200)],
+                           description="e.g. Final-year B.Sc and M.Sc students")
+    scheduled_date = DateField("Date", validators=[Optional()])
+    scheduled_time = StringField(
+        "Time", validators=[Optional(), Regexp(r"^(?:[01]\d|2[0-3]):[0-5]\d$|^$",
+                                               message="Use 24-hour time, e.g. 14:30")],
+        description="24-hour, e.g. 14:30",
+    )
+    duration_minutes = IntegerField("Duration (minutes)", default=60,
+                                    validators=[Optional(), NumberRange(min=10, max=600)])
+    status = SelectField("Status", choices=[(s, s.title()) for s in TalkStatus.ALL],
+                         validators=[DataRequired()])
+    notes = TextAreaField("Notes", validators=[Optional(), Length(max=2000)])
+    submit = SubmitField("Save session")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        ok = True
+        if self.scheduled_time.data and not self.scheduled_date.data:
+            self.scheduled_date.errors.append("Give a date as well as a time.")
+            ok = False
+        if self.status.data == TalkStatus.CONFIRMED and not self.scheduled_date.data:
+            self.scheduled_date.errors.append("A confirmed session needs a date.")
+            ok = False
+        return ok
+
+
+class GalleryAlbumForm(FlaskForm):
+    title = StringField("Album title", validators=[DataRequired(), Length(max=160)])
+    description = TextAreaField("Description", validators=[Optional(), Length(max=2000)])
+    event_date = DateField("Event date", validators=[Optional()])
+    is_published = BooleanField("Published", default=True)
+    sort_order = IntegerField("Display order", default=100,
+                              validators=[Optional(), NumberRange(min=0, max=999)])
+    submit = SubmitField("Save album")
+
+
+class GalleryUploadForm(FlaskForm):
+    images = MultipleFileField(
+        "Photographs",
+        validators=[FileAllowed(["png", "jpg", "jpeg", "webp"], "Images only (png, jpg, webp).")],
+        description="Choose several at once. Large images are resized for the web.",
+    )
+    caption = StringField(
+        "Caption for all of these", validators=[Optional(), Length(max=300)],
+        description="Optional — you can edit each caption afterwards.",
+    )
+    submit = SubmitField("Upload")
+
+
+class GalleryImageForm(FlaskForm):
+    caption = StringField("Caption", validators=[Optional(), Length(max=300)])
+    sort_order = IntegerField("Order", default=100,
+                              validators=[Optional(), NumberRange(min=0, max=999)])
+    submit = SubmitField("Save")
+
+
+class SiteLinksForm(FlaskForm):
+    """The outward links shown in the header and footer."""
+    link_website = URLField("College website", validators=[Optional(), SafeURL(), Length(max=255)])
+    link_linkedin = URLField("LinkedIn", validators=[Optional(), SafeURL(), Length(max=255)])
+    link_instagram = URLField("Instagram", validators=[Optional(), SafeURL(), Length(max=255)])
+    link_youtube = URLField("YouTube", validators=[Optional(), SafeURL(), Length(max=255)])
+    link_facebook = URLField("Facebook", validators=[Optional(), SafeURL(), Length(max=255)])
+    submit = SubmitField("Save links")
 
 
 class FeatureAlumnusForm(FlaskForm):

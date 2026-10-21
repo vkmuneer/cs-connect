@@ -1,0 +1,34 @@
+{% macro internship_status_badge(internship) %}
+  {% if internship.status == 'approved' and internship.is_expired %}<span class="badge warn">Closed to applications</span>
+  {% elif internship.status == 'approved' %}<span class="badge ok">Open</span>
+  {% elif internship.status == 'pending' %}<span class="badge warn">Awaiting approval</span>
+  {% elif internship.status == 'rejected' %}<span class="badge danger">Not approved</span>
+  {% else %}<span class="badge">Closed</span>{% endif %}
+{% endmacro %}
+
+{% macro internship_card(internship, show_status=False) %}
+  <div class="tile internship-card">
+    <div>
+      <h3><a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a></h3>
+      <div class="meta">
+        {{ internship.organisation }}{% if internship.location %} · {{ internship.location }}{% endif %}
+      </div>
+    </div>
+    <div class="chips">
+      <span class="badge brand">{{ internship.mode }}</span>
+      <span class="badge">{{ internship.duration_label }}</span>
+      {% if internship.is_paid %}<span class="badge gold">Paid</span>{% else %}<span class="badge">Unpaid</span>{% endif %}
+      {% if internship.seats %}<span class="badge">{{ internship.seats }} place{{ '' if internship.seats == 1 else 's' }}</span>{% endif %}
+      {% if show_status %}{{ internship_status_badge(internship) }}{% endif %}
+    </div>
+    {% if internship.skills %}
+      <div class="chips">
+        {% for skill in internship.skills[:4] %}<span class="chip">{{ skill.name }}</span>{% endfor %}
+      </div>
+    {% endif %}
+    <div class="foot">
+      <span>Offered by {{ internship.offered_by.full_name }}</span>
+      <span>{% if internship.apply_by %}Apply by {{ internship.apply_by.strftime('%d %b %Y') }}{% else %}Open{% endif %}</span>
+    </div>
+  </div>
+{% endmacro %}

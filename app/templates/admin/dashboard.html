@@ -106,6 +106,21 @@
         <h3>Content</h3>
         <dl class="kv">
           <dt>Applications</dt><dd>{{ stats.applications }}</dd>
+          <dt>Gallery</dt>
+          <dd>
+            <a href="{{ url_for('admin.gallery') }}">{{ stats.albums }} album{{ '' if stats.albums == 1 else 's' }}</a>,
+            {{ stats.gallery_images }} photo{{ '' if stats.gallery_images == 1 else 's' }}
+          </dd>
+          <dt>Talks</dt>
+          <dd>
+            <a href="{{ url_for('admin.talks') }}">{{ stats.talks_upcoming }} upcoming</a>,
+            {{ stats.speakers }} willing speaker{{ '' if stats.speakers == 1 else 's' }}
+          </dd>
+          <dt>Internships</dt>
+          <dd>
+            <a href="{{ url_for('admin.internships') }}">{{ stats.internships }} listed</a>
+            {%- if stats.pending_internships %}, {{ stats.pending_internships }} to approve{% endif %}
+          </dd>
           <dt>Faculty records</dt><dd>{{ stats.faculty }}</dd>
           <dt>Announcements</dt><dd>{{ stats.announcements }}</dd>
           <dt>Skills tracked</dt><dd>{{ stats.skills }}</dd>

@@ -8,7 +8,8 @@ from flask import current_app
 from app.extensions import db
 from app.models import (
     FIRST_BATCH_YEAR, FUTURE_YEARS, MULTI_DEPARTMENT, Announcement, Application,
-    ApplicationStatus, Coordinator,
+    ApplicationStatus, Coordinator, GalleryAlbum, Internship, InternshipStatus,
+    TalkSession, TalkStatus,
     CoordinatorRole, Department, Faculty, Job, JobStatus, Message, Profile,
     Programme, Role, Setting, SitePage, Skill, User,
 )
@@ -40,34 +41,11 @@ DEPARTMENTS = [
          programmes="B.A Economics\nM.A Economics"),
 ]
 
-COORDINATORS = [
-    # current year
-    dict(year="current", role=CoordinatorRole.STAFF, name="Dr. Abdul Rasheed K",
-         designation="Associate Professor & Head", email="rasheed@sscollege.ac.in",
-         phone="+91 94470 00001", sort_order=1,
-         notes="Chairs the alumni cell and signs off on portal verifications."),
-    dict(year="current", role=CoordinatorRole.ALUMNI, name="Ms. Fathima Suhara P",
-         designation="Assistant Professor", email="suhara@sscollege.ac.in",
-         phone="+91 94470 00002", sort_order=2,
-         notes="First point of contact for alumni registrations and meet-ups."),
-    dict(year="current", role=CoordinatorRole.PLACEMENT, name="Mr. Shameer Ali T",
-         designation="Assistant Professor", email="shameer@sscollege.ac.in",
-         phone="+91 94470 00003", sort_order=3,
-         notes="Co-ordinates campus drives and moderates job postings."),
-    dict(year="current", role=CoordinatorRole.STUDENT, name="Safa Jabin",
-         designation="M.Sc final year", email="safa.student@example.com",
-         sort_order=4, notes="Student representative for the alumni network."),
-    # previous year
-    dict(year="previous", role=CoordinatorRole.STAFF, name="Dr. Abdul Rasheed K",
-         designation="Associate Professor & Head", email="rasheed@sscollege.ac.in",
-         sort_order=1),
-    dict(year="previous", role=CoordinatorRole.ALUMNI, name="Ms. Hafsath C A",
-         designation="Assistant Professor", email="hafsath@sscollege.ac.in",
-         sort_order=2),
-    dict(year="previous", role=CoordinatorRole.STUDENT, name="Sufiyan Ahmed",
-         designation="B.Sc 2023 batch", email="sufiyan.qa@example.com",
-         sort_order=3),
-]
+# Coordinator appointments are real administrative roles, so none are invented
+# here. An administrator fills these in under Admin -> Coordinators and
+# Admin -> Batch coordinators.
+COORDINATORS = []
+
 
 PAGES = {
     "about-college": (
@@ -125,35 +103,60 @@ PAGES = {
     ),
 }
 
+# Faculty of the P.G & Research Department of Computer Science, taken from the
+# college website (sscollege.ac.in/department/1/faculty and the staff-details
+# pages) in October 2026. Qualifications are condensed from the prose there.
 FACULTY = [
-    dict(name="Dr. Abdul Rasheed K", designation="Associate Professor & Head",
-         qualification="M.Sc, Ph.D (Computer Science)",
-         specialization="Machine Learning, Natural Language Processing",
-         email="rasheed@sscollege.ac.in", is_hod=True, served_from=2004, sort_order=1),
-    dict(name="Ms. Fathima Suhara P", designation="Assistant Professor",
-         qualification="M.Sc, M.Phil (Computer Science)",
-         specialization="Database Systems, Software Engineering",
-         email="suhara@sscollege.ac.in", served_from=2011, sort_order=2),
-    dict(name="Mr. Shameer Ali T", designation="Assistant Professor",
-         qualification="MCA, NET",
-         specialization="Computer Networks, Cyber Security",
-         email="shameer@sscollege.ac.in", served_from=2013, sort_order=3),
-    dict(name="Ms. Hafsath C A", designation="Assistant Professor",
-         qualification="M.Tech (Computer Science)",
-         specialization="Data Science, Image Processing",
-         email="hafsath@sscollege.ac.in", served_from=2016, sort_order=4),
-    dict(name="Mr. Muhammed Jaseel K", designation="Assistant Professor",
-         qualification="M.Sc (Computer Science)",
-         specialization="Web Technologies, Mobile Application Development",
-         email="jaseel@sscollege.ac.in", served_from=2019, sort_order=5),
-    dict(name="Dr. Moideen Kutty V", designation="Former Head of Department",
-         qualification="M.Sc, Ph.D",
-         specialization="Theory of Computation",
-         is_current=False, served_from=1996, served_to=2004, sort_order=10),
-    dict(name="Mr. Ibrahim Kutty P", designation="Former Assistant Professor",
-         qualification="MCA",
-         specialization="Programming Languages",
-         is_current=False, served_from=1999, served_to=2012, sort_order=11),
+    dict(name="Dr. Shameem Kappan", designation="Head of Department & Associate Professor",
+         qualification="Ph.D (Computer Science) 2020, M.Phil 2010, MCA 1999",
+         specialization="Network Security",
+         email="shameemk@gmail.com", is_hod=True, served_from=2000, sort_order=1,
+         profile_url="https://sscollege.ac.in/staff-details/2"),
+    dict(name="Dr. Mohamed Basheer K P", designation="Associate Professor (lien period)",
+         qualification="Ph.D and M.Phil (Computer Science), Bharathidasan University",
+         specialization="Artificial Intelligence, Biometric Security Systems",
+         email="mbasheerkp@gmail.com", phone="+91 96339 13396",
+         served_from=2001, sort_order=2,
+         profile_url="https://sscollege.ac.in/staff-details/3"),
+    dict(name="Swapna Mol George", designation="Assistant Professor",
+         qualification="M.Sc Computer Science (First Rank, University of Calicut) 2007, "
+                       "UGC-NET with JRF 2010, Ph.D pursuing",
+         specialization="Machine Learning, Speech Processing",
+         email="swapna@sscollege.ac.in", served_from=2011, sort_order=3,
+         profile_url="https://sscollege.ac.in/staff-details/7"),
+    dict(name="Dr. Muneer V K", designation="Assistant Professor",
+         qualification="Ph.D (Computer Science, University of Calicut) 2024, MCA 2008, "
+                       "UGC-NET 2012",
+         specialization="Artificial Intelligence, Machine Learning, Programming Languages",
+         email="vkmuneer@sscollege.ac.in", phone="+91 97447 94110",
+         served_from=2012, sort_order=4,
+         profile_url="https://sscollege.ac.in/staff-details/1"),
+    dict(name="Rababa Kareem K", designation="Assistant Professor",
+         qualification="M.Sc Computer Science (MG University, Kottayam) 2002, UGC-NET",
+         specialization="Computer Science",
+         email="rababa@sscollege.ac.in", phone="+91 94005 54199",
+         served_from=2012, sort_order=5,
+         profile_url="https://sscollege.ac.in/staff-details/6"),
+    dict(name="Ayyoob M P", designation="Assistant Professor",
+         qualification="MCA (University of Calicut) 2009",
+         specialization="Computer Vision",
+         email="mpayyoobmp@gmail.com", served_from=2012, sort_order=6,
+         profile_url="https://sscollege.ac.in/staff-details/4"),
+    dict(name="Dr. Rizwana Kallooravi Thandil", designation="Assistant Professor",
+         qualification="Ph.D (University of Calicut) 2024, MCA 2009, "
+                       "B.Sc Computer Science 2004, UGC-NET",
+         specialization="Computational Intelligence, Speech Processing",
+         email="ktrizwana@sscollege.ac.in", served_from=2012, sort_order=7,
+         profile_url="https://sscollege.ac.in/staff-details/5"),
+    dict(name="Jashira P", designation="Assistant Professor (on contract)",
+         qualification="M.Sc Computer Science 2018, UGC-NET 2018",
+         email="jashirap@gmail.com", served_from=2024, sort_order=8,
+         profile_url="https://sscollege.ac.in/staff-details/70"),
+    dict(name="Insaf P", designation="Guest Faculty",
+         qualification="MCA (APJ Abdul Kalam Technological University) 2020, UGC-NET 2019",
+         email="insaf@sscollege.ac.in", phone="+91 82811 72366",
+         served_from=2022, sort_order=9,
+         profile_url="https://sscollege.ac.in/staff-details/8"),
 ]
 
 ANNOUNCEMENTS = [
@@ -457,6 +460,9 @@ def _seed_members_and_jobs():
     if User.query.filter(User.role == Role.MEMBER).count():
         return None
 
+    admin_row = User.query.filter_by(role=Role.ADMIN).first()
+    admin_id = admin_row.id if admin_row else None
+
     demo_password = current_app.config.get("DEMO_PASSWORD")
     generated = None
     if not demo_password:
@@ -546,6 +552,78 @@ def _seed_members_and_jobs():
         profile.featured_note = note
         profile.featured_order = order
         profile.featured_at = datetime.now(timezone.utc)
+
+    # Alumni willing to come back and speak to students.
+    for email, topics in [
+        ("nasrin.cs@example.com",
+         "Life after graduation: the first two years\n"
+         "Preparing for product-company interviews\n"
+         "Writing backend code that survives scale"),
+        ("ayisha.data@example.com",
+         "Getting into data science from a B.Sc\nWhat a machine-learning team actually does"),
+    ]:
+        profile = users[email].profile
+        profile.offers_expert_talk = True
+        profile.talk_topics = topics
+        profile.talk_mode = "Either"
+    db.session.flush()
+
+    # One session already on the calendar.
+    db.session.add(TalkSession(
+        speaker_id=users["nasrin.cs@example.com"].id,
+        arranged_by_id=admin_id,
+        title="From our classrooms to a product team",
+        topic="What the first two years of work ask of you, and what nobody tells you "
+              "while you are still a student.",
+        mode="On campus", venue="Seminar hall", audience="Final-year B.Sc and M.Sc students",
+        scheduled_for=datetime.now(timezone.utc) + timedelta(days=21),
+        duration_minutes=75, status=TalkStatus.CONFIRMED,
+    ))
+
+    # Internships offered to current students: one listed, one awaiting approval.
+    listed = Internship(
+        offered_by_id=users["jaleel.cloud@example.com"].id,
+        title="Platform engineering intern", organisation="Gadgeon Systems",
+        location="Kochi, Kerala", mode="On-site",
+        description="Six weeks with the platform team: you will containerise a small "
+                    "internal service, write its CI pipeline, and watch it through a "
+                    "release. A mentor sits with you for an hour each day.",
+        learning_outcomes="Docker and Kubernetes in a real cluster\n"
+                          "Reading someone else's code\n"
+                          "What on-call actually looks like",
+        eligibility="Final-year B.Sc or any M.Sc student",
+        duration_weeks=6, seats=2, is_paid=True, stipend="₹12,000 per month",
+        starts_from=date.today() + timedelta(days=40),
+        apply_by=date.today() + timedelta(days=25),
+        status=InternshipStatus.APPROVED,
+    )
+    listed.skills = [Skill.get_or_create(n) for n in ("Docker", "Linux", "Python")]
+    db.session.add(listed)
+
+    pending_internship = Internship(
+        offered_by_id=users["ayisha.data@example.com"].id,
+        title="Data annotation and analysis intern", organisation="Tata Consultancy Services",
+        location="Kochi, Kerala", mode="Hybrid",
+        description="Help the applied-AI group prepare and analyse a document dataset, "
+                    "and present what you find at the end of the term.",
+        learning_outcomes="Pandas on real, messy data\nHow a model is evaluated",
+        eligibility="Any M.Sc student", duration_weeks=8, seats=1,
+        is_paid=True, stipend="₹8,000 per month",
+        apply_by=date.today() + timedelta(days=30),
+        status=InternshipStatus.PENDING,
+    )
+    pending_internship.skills = [Skill.get_or_create(n) for n in ("Python", "Pandas")]
+    db.session.add(pending_internship)
+
+    # An album for the department to fill with photographs.
+    if not GalleryAlbum.query.count():
+        db.session.add(GalleryAlbum(
+            title="Alumni Meet 2026", slug="alumni-meet-2026",
+            description="Photographs from the annual gathering on the campus. "
+                        "Upload yours from the admin gallery.",
+            event_date=date.today() + timedelta(days=45),
+            is_published=True, sort_order=10,
+        ))
 
     # Two offers accepted through the portal — the placement showcase.
     db.session.add(Application(

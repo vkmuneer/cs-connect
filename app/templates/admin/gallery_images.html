@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "macros.html" import file_field, field, confirm_button, empty_state %}
+{% block title %}{{ album.title }} — photographs{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('admin.gallery') }}">Gallery</a> / {{ album.title }}
+    </div>
+    <div class="row between">
+      <div>
+        <h1>{{ album.title }}</h1>
+        <p class="lede">
+          {{ album.image_count }} photograph{{ '' if album.image_count == 1 else 's' }}
+          {%- if album.event_date %} · {{ album.event_date.strftime('%d %B %Y') }}{% endif %}
+          {%- if not album.is_published %} · <span class="badge warn">Draft</span>{% endif %}
+        </p>
+      </div>
+      <div class="btn-group">
+        <a class="btn outline" href="{{ url_for('admin.edit_album', album_id=album.id) }}">Album details</a>
+        <a class="btn outline" href="{{ url_for('main.gallery_album', slug=album.slug) }}">View</a>
+      </div>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="card mb3">
+    <div class="card-head"><h2>Add photographs</h2></div>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="grid cols-2">
+        {{ file_field(form.images, form.images.description) }}
+        {{ field(form.caption, placeholder="e.g. Alumni meet, 2026") }}
+      </div>
+      <button class="btn" type="submit">Upload</button>
+    </form>
+  </div>
+
+  {% if album.images %}
+    <div class="grid cols-3">
+      {% for image in album.images %}
+        <div class="card tight">
+          <img class="admin-photo"
+               src="{{ url_for('static', filename='uploads/gallery/' ~ image.filename) }}"
+               alt="{{ image.caption or '' }}" loading="lazy">
+          {% if album.cover_image_id == image.id %}
+            <span class="badge gold mt1">Cover</span>
+          {% endif %}
+          <form class="mt1" method="post" action="{{ url_for('admin.update_gallery_image', image_id=image.id) }}">
+            {{ image_form.hidden_tag() }}
+            <div class="field">
+              <label class="sr-only" for="caption-{{ image.id }}">Caption</label>
+              <input id="caption-{{ image.id }}" type="text" name="caption"
+                     value="{{ image.caption or '' }}" placeholder="Caption">
+            </div>
+            <div class="row">
+              <input type="number" name="sort_order" value="{{ image.sort_order }}"
+                     min="0" max="999" style="width:5.5rem" aria-label="Order">
+              <button class="btn sm" type="submit">Save</button>
+            </div>
+          </form>
+          <div class="btn-group mt1">
+            {% if album.cover_image_id != image.id %}
+              {{ confirm_button(confirm_form, url_for('admin.set_album_cover', image_id=image.id),
+                                'Make cover', 'btn sm outline', 'Use this as the album cover?') }}
+            {% endif %}
+            {{ confirm_button(confirm_form, url_for('admin.delete_gallery_image', image_id=image.id),
+                              'Delete', 'btn sm danger', 'Delete this photograph?') }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("No photographs in this album yet.", "Use the form above — you can select several at once.") }}
+  {% endif %}
+{% endblock %}

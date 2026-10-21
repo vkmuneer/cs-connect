@@ -21,15 +21,24 @@ TOKEN_RE = re.compile(r'name="csrf_token" (?:type="hidden" )?value="([^"]+)"')
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     application = create_app("testing")
+    # Uploads go to a temporary directory: a test must never leave files in
+    # app/static/uploads.
+    uploads = tmp_path / "uploads"
     application.config.update(
         SQLALCHEMY_DATABASE_URI="sqlite://",
         WTF_CSRF_ENABLED=False,
         SECRET_KEY="test-secret",
         ADMIN_PASSWORD=ADMIN_PASSWORD,
         DEMO_PASSWORD=MEMBER_PASSWORD,
+        UPLOAD_FOLDER=uploads,
+        RESUME_FOLDER=uploads / "resumes",
+        PHOTO_FOLDER=uploads / "photos",
+        GALLERY_FOLDER=uploads / "gallery",
     )
+    for folder in ("UPLOAD_FOLDER", "RESUME_FOLDER", "PHOTO_FOLDER", "GALLERY_FOLDER"):
+        application.config[folder].mkdir(parents=True, exist_ok=True)
     # The context is popped before the tests run: a context left pushed would be
     # reused by every test request, and Flask-Login caches the signed-in user on
     # `g`, so one request's user would leak into the next.

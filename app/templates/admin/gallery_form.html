@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, check %}
+{% block title %}{{ 'Edit album' if album else 'New album' }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Edit album' if album else 'New album' }}</h1>
+    <p class="lede">Give it a name and a date; photographs go in next.</p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.title, placeholder="e.g. Alumni Meet 2026") }}
+        {{ field(form.description, placeholder="A line or two about the occasion.") }}
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {{ field(form.event_date) }}
+          {{ field(form.sort_order) }}
+          {{ check(form.is_published) }}
+          <p class="hint mb0">An unpublished album is visible to administrators only.</p>
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save album</button>
+          <a class="btn outline block mt1" href="{{ url_for('admin.gallery') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

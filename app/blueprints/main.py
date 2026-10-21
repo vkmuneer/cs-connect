@@ -2,11 +2,13 @@
 from sqlalchemy import func
 
 from flask import Blueprint, abort, render_template, request
+from flask_login import current_user
 
 from app.extensions import db
 from app.models import (
     Announcement, Application, Coordinator, CoordinatorRole, Department, Faculty,
-    Job, JobStatus, Profile, Programme, SitePage, User,
+    GalleryAlbum, Job, JobStatus, Profile, Programme, SitePage, TalkSession,
+    TalkStatus, User,
 )
 from app.utils import multi_department_enabled
 
@@ -52,6 +54,7 @@ def index():
         "placements": Application.placement_count(),
     }
 
+    upcoming_talks = TalkSession.upcoming(limit=3)
     placements = (
         Application.placements_query()
         .order_by(Application.updated_at.desc().nullslast())
@@ -67,6 +70,7 @@ def index():
         stats=stats,
         placements=placements,
         prominent=prominent,
+        upcoming_talks=upcoming_talks,
     )
 
 
@@ -97,6 +101,45 @@ def placements():
         by_company=sorted(by_company.items(), key=lambda kv: -kv[1]),
         by_batch=sorted(by_batch.items(), reverse=True),
         by_programme=sorted(by_programme.items(), key=lambda kv: -kv[1]),
+    )
+
+
+# --------------------------------------------------------------------------
+# Photo gallery
+# --------------------------------------------------------------------------
+@main_bp.route("/gallery")
+def gallery():
+    return render_template("pages/gallery.html", albums=GalleryAlbum.published())
+
+
+@main_bp.route("/gallery/<slug>")
+def gallery_album(slug):
+    album = GalleryAlbum.query.filter_by(slug=slug).first()
+    is_admin = current_user.is_authenticated and current_user.is_admin
+    if album is None or (not album.is_published and not is_admin):
+        abort(404)
+    albums = [a for a in GalleryAlbum.published() if a.id != album.id]
+    return render_template("pages/gallery_album.html", album=album, others=albums[:4])
+
+
+# --------------------------------------------------------------------------
+# Expert talks and sessions
+# --------------------------------------------------------------------------
+@main_bp.route("/talks")
+def talks():
+    """Upcoming sessions, past sessions, and alumni willing to speak."""
+    upcoming = TalkSession.upcoming()
+    past = (
+        TalkSession.query.filter(
+            TalkSession.status.in_([TalkStatus.COMPLETED, TalkStatus.CONFIRMED])
+        )
+        .order_by(TalkSession.scheduled_for.desc().nullslast())
+        .all()
+    )
+    past = [t for t in past if t.is_past]
+    speakers = Profile.speakers_query().all()
+    return render_template(
+        "pages/talks.html", upcoming=upcoming, past=past, speakers=speakers,
     )
 
 

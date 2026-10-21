@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}{{ album.title }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('main.gallery') }}">Gallery</a> / {{ album.title }}
+    </div>
+    <div class="row between">
+      <div>
+        <h1>{{ album.title }}</h1>
+        <p class="lede">
+          {% if album.event_date %}{{ album.event_date.strftime('%d %B %Y') }} · {% endif %}
+          {{ album.image_count }} photograph{{ '' if album.image_count == 1 else 's' }}
+          {%- if not album.is_published %} · <span class="badge warn">Unpublished</span>{% endif %}
+        </p>
+      </div>
+      <a class="btn outline" href="{{ url_for('main.gallery') }}">All albums</a>
+    </div>
+  </div>
+
+  {% if album.description %}
+    <div class="card prose mb3"><p class="mb0">{{ album.description|nl2br }}</p></div>
+  {% endif %}
+
+  {% if album.images %}
+    <div class="photo-grid">
+      {% for image in album.images %}
+        <figure class="photo">
+          <a href="{{ url_for('static', filename='uploads/gallery/' ~ image.filename) }}"
+             target="_blank" rel="noopener">
+            <img src="{{ url_for('static', filename='uploads/gallery/' ~ image.filename) }}"
+                 alt="{{ image.caption or album.title }}" loading="lazy">
+          </a>
+          {% if image.caption %}<figcaption>{{ image.caption }}</figcaption>{% endif %}
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    {{ empty_state("This album has no photographs yet.") }}
+  {% endif %}
+
+  {% if others %}
+    <div class="card mt3">
+      <div class="card-head"><h2>Other albums</h2></div>
+      <div class="chips">
+        {% for other in others %}
+          <a class="chip" href="{{ url_for('main.gallery_album', slug=other.slug) }}">
+            {{ other.title }} · {{ other.image_count }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}
