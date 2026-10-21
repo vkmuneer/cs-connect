@@ -18,7 +18,9 @@
         <a class="btn outline" style="border-color:rgba(255,255,255,.45);color:#eaeefb" href="{{ url_for('profiles.directory') }}">{{ text('home.cta_directory') }}</a>
       </div>
     </div>
-    <img class="emblem" src="{{ url_for('static', filename='img/college-emblem.png') }}" alt="">
+    <span class="emblem-panel">
+      <img class="emblem" src="{{ url_for('static', filename='img/college-emblem.png') }}" alt="">
+    </span>
   </section>
 
   <section class="statstrip mt3">
