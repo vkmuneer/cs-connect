@@ -18,6 +18,9 @@ ADDED_COLUMNS = {
         "featured_order": "INTEGER NOT NULL DEFAULT 100",
         "featured_at": "DATETIME",
     },
+    "coordinators": {
+        "batch_year": "INTEGER",
+    },
 }
 
 

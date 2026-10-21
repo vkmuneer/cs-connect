@@ -355,8 +355,12 @@ def batch_year_bounds():
 
     from app.models import FIRST_BATCH_YEAR, FUTURE_YEARS, Setting
 
-    first = current_app.config.get("FIRST_BATCH_YEAR", DEFAULT_FIRST_BATCH_YEAR)
+    first = DEFAULT_FIRST_BATCH_YEAR
     future = DEFAULT_FUTURE_YEARS
+    try:
+        first = current_app.config.get("FIRST_BATCH_YEAR", DEFAULT_FIRST_BATCH_YEAR)
+    except Exception:  # outside an application context
+        pass
     try:
         stored_first = Setting.get(FIRST_BATCH_YEAR)
         stored_future = Setting.get(FUTURE_YEARS)

@@ -54,6 +54,26 @@
         {% endif %}
       </div>
 
+      {% if coordinators %}
+        <div class="card">
+          <h3>Batch coordinator{{ '' if coordinators|length == 1 else 's' }}</h3>
+          <ul class="list-plain small">
+            {% for person in coordinators %}
+              <li>
+                <span class="strong">
+                  {% if person.user_id %}
+                    <a href="{{ url_for('profiles.view_profile', user_id=person.user_id) }}">{{ person.name }}</a>
+                  {% else %}{{ person.name }}{% endif %}
+                </span>
+                <div class="tiny muted">{{ person.role }}{% if person.designation %} · {{ person.designation }}{% endif %}</div>
+                {% if person.email %}<div class="tiny"><a href="mailto:{{ person.email }}">{{ person.email }}</a></div>{% endif %}
+                {% if person.phone %}<div class="tiny muted">{{ person.phone }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       {% if placements %}
         <div class="card">
           <h3>Hired through the portal</h3>

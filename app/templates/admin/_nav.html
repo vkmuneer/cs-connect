@@ -12,6 +12,7 @@
   <a class="{{ 'active' if ep == 'admin.placements' }}" href="{{ url_for('admin.placements') }}">Placements</a>
   <a class="{{ 'active' if ep in ('admin.faculty', 'admin.edit_faculty') }}" href="{{ url_for('admin.faculty') }}">Faculty</a>
   <a class="{{ 'active' if ep in ('admin.coordinators', 'admin.edit_coordinator') }}" href="{{ url_for('admin.coordinators') }}">Coordinators</a>
+  <a class="{{ 'active' if ep == 'admin.batch_coordinators' }}" href="{{ url_for('admin.batch_coordinators') }}">Batch coordinators</a>
   <a class="{{ 'active' if ep in ('admin.departments', 'admin.edit_department') }}" href="{{ url_for('admin.departments') }}">
     Departments{% if not MULTI_DEPARTMENT %} <span class="badge">off</span>{% endif %}
   </a>

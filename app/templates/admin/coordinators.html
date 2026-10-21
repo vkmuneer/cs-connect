@@ -8,7 +8,10 @@
         <h1>Coordinators</h1>
         <p class="lede">Alumni, staff and student coordinators — per department, per academic year.</p>
       </div>
-      <a class="btn" href="{{ url_for('admin.edit_coordinator') }}">Add coordinator</a>
+      <div class="btn-group">
+        <a class="btn outline" href="{{ url_for('admin.batch_coordinators') }}">Batch coordinators</a>
+        <a class="btn" href="{{ url_for('admin.edit_coordinator') }}">Add coordinator</a>
+      </div>
     </div>
   </div>
 

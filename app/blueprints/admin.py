@@ -747,7 +747,8 @@ def coordinators():
     year = request.args.get("year") or ""
     department_id = request.args.get("department", type=int)
 
-    query = Coordinator.query
+    # Department-level records only; batch coordinators have their own register.
+    query = Coordinator.query.filter(Coordinator.batch_year.is_(None))
     if year:
         query = query.filter_by(academic_year=year)
     if department_id:
@@ -785,10 +786,17 @@ def edit_coordinator(coordinator_id=None):
     if request.method == "GET":
         if row is not None:
             form.department.data = str(row.department_id)
+            form.batch_year.data = str(row.batch_year) if row.batch_year else ""
         else:
             primary = Department.primary()
             form.department.data = str(primary.id) if primary else ""
-            form.academic_year.data = Coordinator.current_year_label()
+            # ?batch=2009 comes from the batch register's "Add" links.
+            batch = request.args.get("batch", type=int)
+            if batch:
+                form.batch_year.data = str(batch)
+                form.academic_year.data = Coordinator.academic_year_for_batch(batch)
+            else:
+                form.academic_year.data = Coordinator.current_year_label()
 
     if form.validate_on_submit():
         dept = db.session.get(Department, int(form.department.data or 0))
@@ -805,9 +813,19 @@ def edit_coordinator(coordinator_id=None):
             row = Coordinator()
             db.session.add(row)
         row.department_id = dept.id
-        for field in ("academic_year", "name", "role", "designation", "email",
-                      "phone", "notes", "is_active"):
+        for field in ("name", "role", "designation", "email", "phone", "notes",
+                      "is_active"):
             setattr(row, field, getattr(form, field).data)
+
+        # A batch coordinator belongs to a year of admission; its academic year
+        # follows from that batch unless one was typed in.
+        batch = form.batch_year.data
+        row.batch_year = int(batch) if batch else None
+        row.academic_year = (
+            form.academic_year.data
+            or (Coordinator.academic_year_for_batch(row.batch_year) if row.batch_year
+                else Coordinator.current_year_label())
+        )
         row.sort_order = form.sort_order.data or 100
         if photo:
             delete_upload(row.photo_filename, "photo")
@@ -818,11 +836,14 @@ def edit_coordinator(coordinator_id=None):
             member = User.query.filter_by(email=row.email.lower().strip()).first()
             row.user_id = member.id if member else None
 
+        scope = f"batch {row.batch_year}" if row.batch_year else dept.name
         ActivityLog.record(
-            current_user, "coordinator_save", f"{row.name} · {dept.name} · {row.academic_year}"
+            current_user, "coordinator_save", f"{row.name} · {scope} · {row.academic_year}"
         )
         db.session.commit()
         flash("Coordinator saved.", "success")
+        if row.batch_year:
+            return redirect(url_for("admin.batch_coordinators"))
         return redirect(url_for("admin.coordinators", year=row.academic_year))
 
     return render_template("admin/coordinator_form.html", form=form, coordinator=row)
@@ -927,3 +948,45 @@ def unhighlight_member(user_id):
         db.session.commit()
         flash(f"{user.full_name} is no longer highlighted.", "info")
     return redirect(request.referrer or url_for("admin.prominent"))
+
+
+# --------------------------------------------------------------------------
+# Batch coordinators — one register, every year of admission
+# --------------------------------------------------------------------------
+@admin_bp.route("/batch-coordinators")
+def batch_coordinators():
+    """Every year of admission since the first batch, with its coordinators."""
+    first_year, last_year = batch_year_bounds()
+    coordinators_by_batch = Coordinator.batch_map()
+
+    # How many members registered in each year, so an admin can see which
+    # batches actually need a coordinator.
+    members = dict(
+        db.session.query(Profile.batch_year, func.count(Profile.id))
+        .group_by(Profile.batch_year)
+        .all()
+    )
+
+    show = request.args.get("show", "all")
+    rows = []
+    for year in range(last_year, first_year - 1, -1):
+        people = coordinators_by_batch.get(year, [])
+        if show == "missing" and people:
+            continue
+        if show == "filled" and not people:
+            continue
+        if show == "with-members" and not members.get(year):
+            continue
+        rows.append({
+            "year": year,
+            "coordinators": people,
+            "members": members.get(year, 0),
+        })
+
+    total_years = last_year - first_year + 1
+    covered = len([y for y in coordinators_by_batch if first_year <= y <= last_year])
+    return render_template(
+        "admin/batch_coordinators.html", rows=rows, show=show,
+        first_year=first_year, last_year=last_year, total_years=total_years,
+        covered=covered, confirm_form=ConfirmForm(),
+    )

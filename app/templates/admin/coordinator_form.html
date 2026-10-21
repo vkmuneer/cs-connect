@@ -15,8 +15,9 @@
       <div class="card">
         <div class="grid cols-2">
           {{ field(form.department) }}
-          {{ field(form.academic_year, placeholder="2026-27") }}
+          {{ field(form.batch_year) }}
         </div>
+        {{ field(form.academic_year, placeholder="2026-27") }}
         {{ field(form.name) }}
         <div class="grid cols-2">
           {{ field(form.role) }}
@@ -29,6 +30,8 @@
         {{ field(form.notes, placeholder="What this coordinator looks after") }}
         <p class="hint">
           If the email matches a portal account, the public listing links to that member's profile.
+          Pick a batch to make this a batch coordinator — leave it unset for a coordinator
+          of the department as a whole.
         </p>
       </div>
       <aside class="stack">

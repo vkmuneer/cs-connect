@@ -185,8 +185,11 @@ def batch(year):
         app for profile in members for app in profile.user.applications
         if app.status == ApplicationStatus.HIRED
     ]
+    from app.models import Coordinator
+
     return render_template(
         "profiles/batch.html",
+        coordinators=Coordinator.for_batch(year),
         year=year, members=members, programme=programme, spread=spread,
         placements=placements, all_years=[y for y, _ in _batch_years()],
         programmes=[p for p, _ in programme_choices()],

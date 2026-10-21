@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "macros.html" import confirm_button, empty_state %}
+{% block title %}Batch coordinators{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="row between">
+      <div>
+        <h1>Batch coordinators</h1>
+        <p class="lede">
+          A coordinator for every year of admission from {{ first_year }} to {{ last_year }}.
+        </p>
+      </div>
+      <a class="btn" href="{{ url_for('admin.edit_coordinator') }}">Add coordinator</a>
+    </div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="statstrip mb3">
+    <div><div class="n">{{ total_years }}</div><div class="l">Years of admission</div></div>
+    <div><div class="n">{{ covered }}</div><div class="l">With a coordinator</div></div>
+    <div><div class="n">{{ total_years - covered }}</div><div class="l">Still to assign</div></div>
+    <div><div class="n">{{ first_year }}</div><div class="l">First batch</div></div>
+    <div><div class="n">{{ last_year }}</div><div class="l">Latest batch</div></div>
+  </div>
+
+  <div class="tabs">
+    {% for value, label in [('all', 'All years'), ('missing', 'Without a coordinator'),
+                            ('filled', 'With a coordinator'), ('with-members', 'Years that have members')] %}
+      <a class="{{ 'active' if show == value }}" href="{{ url_for('admin.batch_coordinators', show=value) }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if rows %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Year of admission</th><th>Members</th><th>Coordinator(s)</th><th>Contact</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td>
+                <span class="strong">{{ row.year }}</span>
+                <div class="tiny muted">{{ row.year }}-{{ '%02d'|format((row.year + 1) % 100) }} intake</div>
+              </td>
+              <td>
+                {% if row.members %}
+                  <a href="{{ url_for('admin.members', batch=row.year) }}">{{ row.members }}</a>
+                {% else %}<span class="muted">—</span>{% endif %}
+              </td>
+              <td class="small">
+                {% if row.coordinators %}
+                  {% for person in row.coordinators %}
+                    <div{% if not loop.first %} class="mt1"{% endif %}>
+                      <span class="strong">{{ person.name }}</span>
+                      <span class="badge brand">{{ person.role }}</span>
+                      {% if not person.is_active %}<span class="badge">Past</span>{% endif %}
+                      {% if person.designation %}<div class="tiny muted">{{ person.designation }}</div>{% endif %}
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <span class="badge warn">Not assigned</span>
+                {% endif %}
+              </td>
+              <td class="small">
+                {% for person in row.coordinators %}
+                  <div>
+                    {% if person.email %}{{ person.email }}{% endif %}
+                    {% if person.phone %}<div class="tiny muted">{{ person.phone }}</div>{% endif %}
+                  </div>
+                {% endfor %}
+              </td>
+              <td class="nowrap">
+                <div class="btn-group">
+                  <a class="btn sm {{ 'outline' if row.coordinators else '' }}"
+                     href="{{ url_for('admin.edit_coordinator', batch=row.year) }}">
+                    {{ 'Add another' if row.coordinators else 'Assign' }}
+                  </a>
+                  {% for person in row.coordinators %}
+                    <a class="btn sm outline" href="{{ url_for('admin.edit_coordinator', coordinator_id=person.id) }}">
+                      Edit{{ ' ' ~ person.name.split()[-1] if row.coordinators|length > 1 else '' }}
+                    </a>
+                  {% endfor %}
+                  {% if row.coordinators|length == 1 %}
+                    {{ confirm_button(confirm_form,
+                        url_for('admin.delete_coordinator', coordinator_id=row.coordinators[0].id),
+                        'Remove', 'btn sm danger', 'Remove this batch coordinator?') }}
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    {{ empty_state("No years match this view.") }}
+  {% endif %}
+
+  <div class="card mt3">
+    <h3>How this register works</h3>
+    <ul class="small" style="padding-left:1.1rem;margin:0">
+      <li>Every year from {{ first_year }} to {{ last_year }} has a row, whether or not it has members yet.</li>
+      <li>A batch coordinator is usually an alumnus of that batch who acts as its point of contact.</li>
+      <li>The year range comes from <a href="{{ url_for('admin.departments') }}">Departments → Batch years</a>.</li>
+      <li>Coordinators for the department as a whole live under
+          <a href="{{ url_for('admin.coordinators') }}">Coordinators</a> instead.</li>
+    </ul>
+  </div>
+{% endblock %}

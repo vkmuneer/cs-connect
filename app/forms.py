@@ -42,6 +42,10 @@ def _years_all_batches():
     return _years_with("All batches")
 
 
+def _years_or_department():
+    return _years_with("— department-level, not a batch —")
+
+
 class LoginForm(FlaskForm):
     email = EmailField("Email", validators=[DataRequired(), Email(), Length(max=160)])
     password = PasswordField("Password", validators=[DataRequired()])
@@ -344,9 +348,14 @@ class DepartmentForm(FlaskForm):
 
 class CoordinatorForm(FlaskForm):
     department = SelectField("Department", choices=[], validators=[DataRequired()], validate_choice=False)
+    batch_year = SelectField(
+        "Batch (year of admission)", choices=_years_or_department,
+        validators=[Optional()], validate_choice=False,
+        description="Set this for a batch coordinator; leave it for a department coordinator.",
+    )
     academic_year = StringField(
-        "Academic year", validators=[DataRequired(), Regexp(r"^\d{4}-\d{2}$", message="Use the form 2025-26.")],
-        description="e.g. 2025-26",
+        "Academic year", validators=[Optional(), Regexp(r"^\d{4}-\d{2}$", message="Use the form 2025-26.")],
+        description="e.g. 2025-26 — filled in from the batch when you pick one.",
     )
     name = StringField("Name", validators=[DataRequired(), Length(max=120)])
     role = SelectField("Role", choices=[(r, r) for r in CoordinatorRole.ALL], validators=[DataRequired()])
@@ -359,6 +368,16 @@ class CoordinatorForm(FlaskForm):
     is_active = BooleanField("Currently serving", default=True)
     sort_order = IntegerField("Display order", default=100, validators=[Optional(), NumberRange(min=0, max=999)])
     submit = SubmitField("Save coordinator")
+
+    def validate(self, extra_validators=None):
+        if not super().validate(extra_validators=extra_validators):
+            return False
+        if not self.batch_year.data and not self.academic_year.data:
+            self.academic_year.errors.append(
+                "Give an academic year, or pick the batch this coordinator looks after."
+            )
+            return False
+        return True
 
 
 class FeatureAlumnusForm(FlaskForm):

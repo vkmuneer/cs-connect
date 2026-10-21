@@ -611,6 +611,9 @@ class Coordinator(db.Model):
         nullable=False, index=True,
     )
     academic_year = db.Column(db.String(12), nullable=False, index=True)  # e.g. 2025-26
+    # Set for a batch coordinator: the year of admission they look after.
+    # Left empty for a department-level coordinator.
+    batch_year = db.Column(db.Integer, index=True)
 
     name = db.Column(db.String(120), nullable=False)
     role = db.Column(db.String(60), default=CoordinatorRole.ALUMNI, nullable=False, index=True)
@@ -634,11 +637,42 @@ class Coordinator(db.Model):
                  .replace("Ms.", "").replace("Mrs.", "").split() if p]
         return "".join(p[0].upper() for p in parts[:2]) or "C"
 
+    @property
+    def is_batch_coordinator(self):
+        return self.batch_year is not None
+
+    @staticmethod
+    def academic_year_for_batch(batch_year):
+        """A batch admitted in 1995 belongs to the 1995-96 academic year."""
+        return f"{batch_year}-{str(int(batch_year) + 1)[2:]}"
+
+    @classmethod
+    def for_batch(cls, batch_year, active_only=True):
+        query = cls.query.filter_by(batch_year=batch_year)
+        if active_only:
+            query = query.filter_by(is_active=True)
+        return query.order_by(cls.sort_order, cls.name).all()
+
+    @classmethod
+    def batch_map(cls, active_only=False):
+        """batch year -> its coordinator records."""
+        query = cls.query.filter(cls.batch_year.isnot(None))
+        if active_only:
+            query = query.filter_by(is_active=True)
+        out = {}
+        for row in query.order_by(cls.sort_order, cls.name).all():
+            out.setdefault(row.batch_year, []).append(row)
+        return out
+
     @classmethod
     def academic_years(cls):
-        rows = db.session.query(cls.academic_year).distinct().order_by(
-            cls.academic_year.desc()
-        ).all()
+        rows = (
+            db.session.query(cls.academic_year)
+            .filter(cls.batch_year.is_(None))
+            .distinct()
+            .order_by(cls.academic_year.desc())
+            .all()
+        )
         return [r[0] for r in rows]
 
     @classmethod
