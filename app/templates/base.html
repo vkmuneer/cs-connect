@@ -37,48 +37,107 @@
 </header>
 
 {% set ep = request.endpoint or '' %}
+{% set dept_pages = ['main.about_department', 'main.about_college', 'main.faculty',
+                     'main.coordinators', 'main.announcements', 'main.announcement_detail',
+                     'main.gallery', 'main.gallery_album', 'main.contact', 'main.departments'] %}
+{% set alumni_pages = ['profiles.directory', 'profiles.prominent', 'profiles.batches',
+                       'profiles.batch', 'profiles.view_profile', 'main.placements'] %}
+{% set opp_pages = ['jobs.listing', 'jobs.detail', 'main.talks'] %}
 <nav class="nav">
   <div class="wrap">
     <button class="nav-toggle" type="button" aria-expanded="false">☰ Menu</button>
-    <div class="links" style="display:flex;align-items:center;gap:.15rem;flex-wrap:wrap;flex:1">
-      <a href="{{ url_for('main.index') }}" class="{{ 'active' if ep == 'main.index' }}">Home</a>
-      <a href="{{ url_for('main.about_department') }}" class="{{ 'active' if ep == 'main.about_department' }}">Department</a>
-      <a href="{{ url_for('main.faculty') }}" class="{{ 'active' if ep == 'main.faculty' }}">Faculty</a>
-      <a href="{{ url_for('profiles.directory') }}" class="{{ 'active' if ep == 'profiles.directory' }}">Alumni</a>
-      <a href="{{ url_for('profiles.prominent') }}" class="{{ 'active' if ep == 'profiles.prominent' }}">Prominent</a>
-      <a href="{{ url_for('profiles.batches') }}" class="{{ 'active' if ep in ('profiles.batches', 'profiles.batch') }}">Batches</a>
-      <a href="{{ url_for('jobs.listing') }}" class="{{ 'active' if ep == 'jobs.listing' }}">Opportunities</a>
-      <a href="{{ url_for('internships.listing') }}" class="{{ 'active' if ep.startswith('internships.') }}">Internships</a>
-      <a href="{{ url_for('main.talks') }}" class="{{ 'active' if ep == 'main.talks' }}">Talks</a>
-      <a href="{{ url_for('main.placements') }}" class="{{ 'active' if ep == 'main.placements' }}">Placements</a>
-      <a href="{{ url_for('main.coordinators') }}" class="{{ 'active' if ep == 'main.coordinators' }}">Coordinators</a>
-      {% if MULTI_DEPARTMENT %}
-        <a href="{{ url_for('main.departments') }}" class="{{ 'active' if ep == 'main.departments' }}">Departments</a>
-      {% endif %}
-      <a href="{{ url_for('main.gallery') }}" class="{{ 'active' if ep.startswith('main.gallery') }}">Gallery</a>
-      <a href="{{ url_for('main.announcements') }}" class="{{ 'active' if ep.startswith('main.announcement') }}">News</a>
+    <ul class="links menu">
+      <li><a href="{{ url_for('main.index') }}" class="{{ 'active' if ep == 'main.index' }}">Home</a></li>
 
-      <span class="spacer"></span>
+      <li class="has-sub">
+        <a href="{{ url_for('main.about_department') }}" class="{{ 'active' if ep in dept_pages }}"
+           aria-haspopup="true">Department <span class="caret">▾</span></a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('main.about_department') }}">About the department</a></li>
+          <li><a href="{{ url_for('main.about_college') }}">About the college</a></li>
+          <li><a href="{{ url_for('main.faculty') }}">Faculty</a></li>
+          <li><a href="{{ url_for('main.coordinators') }}">Coordinators</a></li>
+          {% if MULTI_DEPARTMENT %}
+            <li><a href="{{ url_for('main.departments') }}">All departments</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('main.announcements') }}">News &amp; events</a></li>
+          <li><a href="{{ url_for('main.gallery') }}">Gallery</a></li>
+          <li><a href="{{ url_for('main.contact') }}">Contact</a></li>
+        </ul>
+      </li>
+
+      <li class="has-sub">
+        <a href="{{ url_for('profiles.directory') }}" class="{{ 'active' if ep in alumni_pages }}"
+           aria-haspopup="true">Alumni <span class="caret">▾</span></a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('profiles.directory') }}">Directory</a></li>
+          <li><a href="{{ url_for('profiles.prominent') }}">Prominent alumni</a></li>
+          <li><a href="{{ url_for('profiles.batches') }}">Browse by batch</a></li>
+          <li><a href="{{ url_for('main.placements') }}">Placements</a></li>
+        </ul>
+      </li>
+
+      <li class="has-sub">
+        <a href="{{ url_for('jobs.listing') }}" class="{{ 'active' if ep in opp_pages or ep.startswith('internships.') }}"
+           aria-haspopup="true">Opportunities <span class="caret">▾</span></a>
+        <ul class="submenu">
+          <li><a href="{{ url_for('jobs.listing') }}">Job board</a></li>
+          <li><a href="{{ url_for('internships.listing') }}">Internships</a></li>
+          <li><a href="{{ url_for('main.talks') }}">Talks &amp; sessions</a></li>
+          {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('jobs.create') }}">Post a role</a></li>
+            <li><a href="{{ url_for('internships.create') }}">Offer an internship</a></li>
+          {% endif %}
+        </ul>
+      </li>
+
+      <li class="spacer"></li>
 
       {% if current_user.is_authenticated %}
-        <a href="{{ url_for('messages.inbox') }}" class="{{ 'active' if ep.startswith('messages.') }}">
-          Messages{% if unread_messages %} <span class="pill">{{ unread_messages }}</span>{% endif %}
-        </a>
-        <a href="{{ url_for('profiles.my_profile') }}" class="{{ 'active' if ep == 'profiles.my_profile' }}">Dashboard</a>
-        {% if current_user.is_admin %}
-          <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">
-            Admin{% set queue = pending_jobs_count + pending_users_count + pending_internships_count %}{% if queue %} <span class="pill">{{ queue }}</span>{% endif %}
+        <li>
+          <a href="{{ url_for('messages.inbox') }}" class="{{ 'active' if ep.startswith('messages.') }}">
+            Messages{% if unread_messages %} <span class="pill">{{ unread_messages }}</span>{% endif %}
           </a>
+        </li>
+        <li class="has-sub">
+          <a href="{{ url_for('staff.dashboard') if current_user.is_faculty else url_for('profiles.my_profile') }}"
+             class="{{ 'active' if ep.startswith('staff.') or ep == 'profiles.my_profile' }}"
+             aria-haspopup="true">My account <span class="caret">▾</span></a>
+          <ul class="submenu right">
+            <li class="submenu-head">
+              {{ current_user.full_name }}
+              <div class="tiny muted">{{ current_user.role_label }}</div>
+            </li>
+            {% if current_user.is_faculty %}
+              <li><a href="{{ url_for('staff.dashboard') }}">Staff dashboard</a></li>
+              <li><a href="{{ url_for('staff.my_entry') }}">My faculty entry</a></li>
+            {% else %}
+              <li><a href="{{ url_for('profiles.my_profile') }}">{{ text('dashboard.title') }}</a></li>
+              <li><a href="{{ url_for('profiles.edit_profile') }}">Edit my profile</a></li>
+              <li><a href="{{ url_for('jobs.my_applications') }}">My applications</a></li>
+              <li><a href="{{ url_for('internships.mine') }}">My internships</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('auth.change_password') }}">Change password</a></li>
+            <li>
+              <form method="post" action="{{ url_for('auth.logout') }}" class="submenu-signout">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Sign out</button>
+              </form>
+            </li>
+          </ul>
+        </li>
+        {% if current_user.is_admin %}
+          <li>
+            <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep.startswith('admin.') }}">
+              Admin{% set queue = pending_jobs_count + pending_users_count + pending_internships_count %}{% if queue %} <span class="pill">{{ queue }}</span>{% endif %}
+            </a>
+          </li>
         {% endif %}
-        <form method="post" action="{{ url_for('auth.logout') }}" class="nav-signout">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit">Sign out</button>
-        </form>
       {% else %}
-        <a href="{{ url_for('auth.login') }}" class="{{ 'active' if ep == 'auth.login' }}">Sign in</a>
-        <a href="{{ url_for('auth.register') }}" class="{{ 'active' if ep == 'auth.register' }}">Register</a>
+        <li><a href="{{ url_for('auth.login') }}" class="{{ 'active' if ep == 'auth.login' }}">Sign in</a></li>
+        <li><a href="{{ url_for('auth.register') }}" class="{{ 'active' if ep == 'auth.register' }}">Register</a></li>
       {% endif %}
-    </div>
+    </ul>
   </div>
 </nav>
 

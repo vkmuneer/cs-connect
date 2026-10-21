@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}Login for {{ member.name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>{{ 'Reset the login' if member.account else 'Create a login' }}</h1>
+    <p class="lede">
+      {{ member.name }} — {{ member.designation or 'faculty' }}
+    </p>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="split">
+    <div class="card">
+      <form method="post" novalidate>
+        {{ form.hidden_tag() }}
+        {{ field(form.email) }}
+        {{ field(form.password) }}
+        <p class="hint">
+          A teacher signs in at the usual sign-in page and lands on their own
+          dashboard. They can keep their entry on the faculty page up to date,
+          read the alumni directory and resumes, and post opportunities and
+          internships — which go live without moderation, as staff postings do.
+          They cannot reach the administration area.
+        </p>
+        <div class="form-actions">
+          <button class="btn" type="submit">
+            {{ 'Reset password' if member.account else 'Create login' }}
+          </button>
+          <a class="btn outline" href="{{ url_for('admin.faculty') }}">Cancel</a>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <h3>On the faculty page</h3>
+        <dl class="kv">
+          <dt>Name</dt><dd>{{ member.name }}</dd>
+          <dt>Designation</dt><dd>{{ member.designation or '—' }}</dd>
+          <dt>Listed email</dt><dd>{{ member.email or 'none' }}</dd>
+          <dt>Serving</dt><dd>{{ 'Yes' if member.is_current else 'Former faculty' }}</dd>
+        </dl>
+      </div>
+      {% if member.account %}
+        <div class="card">
+          <h3>Current login</h3>
+          <dl class="kv">
+            <dt>Email</dt><dd>{{ member.account.email }}</dd>
+            <dt>Role</dt><dd>{{ member.account.role_label }}</dd>
+            <dt>Last sign-in</dt>
+            <dd>{{ member.account.last_login_at.strftime('%d %b %Y, %H:%M') if member.account.last_login_at else 'never' }}</dd>
+          </dl>
+          <p class="small muted mb0">
+            Saving this form replaces the password; the teacher is not told
+            automatically, so pass it on yourself.
+          </p>
+        </div>
+      {% else %}
+        <div class="card">
+          <h3>No login yet</h3>
+          <p class="small mb0">
+            Leave the password empty and one will be generated and shown to you
+            once, on the next screen.
+          </p>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

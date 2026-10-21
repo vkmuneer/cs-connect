@@ -75,7 +75,7 @@ def create():
         internship = Internship(offered_by_id=current_user.id)
         _apply_form(form, internship)
         internship.status = (
-            InternshipStatus.APPROVED if current_user.is_admin else InternshipStatus.PENDING
+            InternshipStatus.APPROVED if current_user.is_staff else InternshipStatus.PENDING
         )
         db.session.add(internship)
         ActivityLog.record(
@@ -109,7 +109,7 @@ def edit(internship_id):
 
     if form.validate_on_submit():
         _apply_form(form, internship)
-        if not current_user.is_admin and internship.status == InternshipStatus.APPROVED:
+        if not current_user.is_staff and internship.status == InternshipStatus.APPROVED:
             internship.status = InternshipStatus.PENDING
             flash("Your changes were saved and sent for re-approval.", "info")
         else:

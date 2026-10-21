@@ -326,9 +326,14 @@ DEMO_JOBS = [
 ]
 
 
+# Symbols that survive being shown in HTML and are easy to retype: no &, <, >,
+# quotes, or characters a shell would eat.
+PASSWORD_SYMBOLS = "!@#%*+-=?"
+
+
 def generate_password(length=16):
     """A readable random password, used when none is configured."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*-_=+"
+    alphabet = string.ascii_letters + string.digits + PASSWORD_SYMBOLS
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 

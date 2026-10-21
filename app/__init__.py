@@ -104,6 +104,7 @@ def _register_blueprints(app):
     from app.blueprints.main import main_bp
     from app.blueprints.messages import messages_bp
     from app.blueprints.profiles import profiles_bp
+    from app.blueprints.staff import staff_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -111,6 +112,7 @@ def _register_blueprints(app):
     app.register_blueprint(jobs_bp, url_prefix="/jobs")
     app.register_blueprint(internships_bp, url_prefix="/internships")
     app.register_blueprint(messages_bp, url_prefix="/messages")
+    app.register_blueprint(staff_bp, url_prefix="/staff")
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
 

@@ -243,6 +243,9 @@ def view_profile(user_id):
 @login_required
 def my_profile():
     if current_user.profile is None:
+        # A teacher without an alumni profile belongs on the staff dashboard.
+        if current_user.is_faculty:
+            return redirect(url_for("staff.dashboard"))
         return redirect(url_for("profiles.edit_profile"))
 
     my_jobs = (

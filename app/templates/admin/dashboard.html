@@ -121,7 +121,11 @@
             <a href="{{ url_for('admin.internships') }}">{{ stats.internships }} listed</a>
             {%- if stats.pending_internships %}, {{ stats.pending_internships }} to approve{% endif %}
           </dd>
-          <dt>Faculty records</dt><dd>{{ stats.faculty }}</dd>
+          <dt>Faculty records</dt>
+          <dd>
+            <a href="{{ url_for('admin.faculty') }}">{{ stats.faculty }}</a>,
+            {{ stats.faculty_logins }} with a login
+          </dd>
           <dt>Announcements</dt><dd>{{ stats.announcements }}</dd>
           <dt>Skills tracked</dt><dd>{{ stats.skills }}</dd>
           <dt>Messages sent</dt><dd>{{ stats.messages }}</dd>

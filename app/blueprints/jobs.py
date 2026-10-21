@@ -94,8 +94,8 @@ def create():
     if form.validate_on_submit():
         job = Job(posted_by_id=current_user.id)
         _apply_job_form(form, job)
-        # Admin postings go live immediately; member postings are moderated.
-        job.status = JobStatus.APPROVED if current_user.is_admin else JobStatus.PENDING
+        # Staff postings go live immediately; member postings are moderated.
+        job.status = JobStatus.APPROVED if current_user.is_staff else JobStatus.PENDING
         db.session.add(job)
 
         profile = current_user.profile
@@ -134,7 +134,7 @@ def edit(job_id):
     if form.validate_on_submit():
         _apply_job_form(form, job)
         # Re-moderate member edits to an already-approved posting.
-        if not current_user.is_admin and job.status == JobStatus.APPROVED:
+        if not current_user.is_staff and job.status == JobStatus.APPROVED:
             job.status = JobStatus.PENDING
             flash("Your changes were saved and sent for re-approval.", "info")
         else:
@@ -186,7 +186,7 @@ def reopen(job_id):
         abort(403)
     form = ConfirmForm()
     if form.validate_on_submit():
-        job.status = JobStatus.APPROVED if current_user.is_admin else JobStatus.PENDING
+        job.status = JobStatus.APPROVED if current_user.is_staff else JobStatus.PENDING
         db.session.commit()
         flash("The opportunity has been reopened.", "success")
     return redirect(url_for("jobs.detail", job_id=job.id))

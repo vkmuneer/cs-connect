@@ -12,7 +12,7 @@ from wtforms.validators import (
 
 from app.models import (
     INTERNSHIP_MODES, JOB_TYPES, TALK_MODES, WORK_MODES, ApplicationStatus,
-    CoordinatorRole, InterestStatus, Programme, TalkStatus,
+    CoordinatorRole, InterestStatus, Programme, Role, TalkStatus,
 )
 from app.utils import SafeURL, StrongPassword, portal_today
 
@@ -400,7 +400,9 @@ class SitePageForm(FlaskForm):
 class AdminUserForm(FlaskForm):
     full_name = StringField("Full name", validators=[DataRequired(), Length(max=120)])
     email = EmailField("Email", validators=[DataRequired(), Email(), Length(max=160)])
-    role = SelectField("Role", choices=[("member", "Member"), ("admin", "Administrator")], validators=[DataRequired()])
+    role = SelectField(
+        "Role", choices=[(r, Role.LABELS[r]) for r in Role.ALL], validators=[DataRequired()],
+    )
     is_approved = BooleanField("Approved")
     is_blocked = BooleanField("Suspended")
     new_password = PasswordField(
@@ -533,6 +535,28 @@ class GalleryImageForm(FlaskForm):
     sort_order = IntegerField("Order", default=100,
                               validators=[Optional(), NumberRange(min=0, max=999)])
     submit = SubmitField("Save")
+
+
+class FacultyAccountForm(FlaskForm):
+    """An administrator creating or resetting a teacher's login."""
+    email = EmailField("Sign-in email", validators=[DataRequired(), Email(), Length(max=160)])
+    password = PasswordField(
+        "Password", validators=[Optional(), Length(min=8), StrongPassword("email")],
+        description="Leave empty and one will be generated and shown to you once.",
+    )
+    submit = SubmitField("Create login")
+
+
+class FacultySelfForm(FlaskForm):
+    """What a teacher may change about their own entry on the faculty page."""
+    qualification = StringField("Qualification", validators=[Optional(), Length(max=160)])
+    specialization = StringField("Area of specialisation", validators=[Optional(), Length(max=200)])
+    email = EmailField("Email shown on the page", validators=[Optional(), Email(), Length(max=160)])
+    phone = StringField("Phone shown on the page", validators=[Optional(), Length(max=32)])
+    photo = FileField("Photograph", validators=[FileAllowed(["png", "jpg", "jpeg", "webp"], "Images only.")])
+    profile_url = URLField("Profile link", validators=[Optional(), SafeURL(), Length(max=255)],
+                           description="Your page on the college website, if you have one.")
+    submit = SubmitField("Save my entry")
 
 
 class SiteLinksForm(FlaskForm):

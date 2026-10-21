@@ -138,8 +138,10 @@ def test_suspension_ends_a_live_session(client, app):
     # and nothing else behind the login wall is reachable either
     assert client.get("/jobs/post").status_code == 302
     assert client.get("/messages/").status_code == 302
+    # the navigation is back to a visitor's: an account menu is gone, sign-in is back
     body = client.get("/", follow_redirects=True).get_data(as_text=True)
-    assert "Dashboard" not in body  # the nav no longer shows a signed-in member
+    assert "My account" not in body
+    assert "Sign in" in body
 
 
 def test_admin_cannot_suspend_or_delete_themselves(client, app):

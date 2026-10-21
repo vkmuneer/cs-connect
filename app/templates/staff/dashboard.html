@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% from "macros.html" import avatar, member_card, empty_state %}
+{% from "macros_internship.html" import internship_status_badge %}
+{% block title %}Staff dashboard{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <h1>Staff dashboard</h1>
+    <p class="lede">
+      {% if record %}
+        {{ record.name }} — {{ record.designation or 'faculty' }}, {{ DEPARTMENT_NAME }}.
+      {% else %}
+        Signed in as {{ current_user.full_name }} ({{ current_user.role_label }}).
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="statstrip mb3">
+    <div><div class="n">{{ stats.members }}</div><div class="l">Verified alumni</div></div>
+    <div><div class="n">{{ stats.batches }}</div><div class="l">Batches</div></div>
+    <div><div class="n">{{ stats.open_jobs }}</div><div class="l">Open roles</div></div>
+    <div><div class="n">{{ stats.open_internships }}</div><div class="l">Internships</div></div>
+    <div><div class="n">{{ stats.placements }}</div><div class="l">Placed via portal</div></div>
+  </div>
+
+  <div class="split">
+    <div class="stack">
+      <div class="card">
+        <div class="card-head">
+          <h2>What I have posted</h2>
+          <div class="btn-group">
+            <a class="btn sm" href="{{ url_for('jobs.create') }}">Post a role</a>
+            <a class="btn sm outline" href="{{ url_for('internships.create') }}">Offer an internship</a>
+          </div>
+        </div>
+        {% if my_jobs or my_internships %}
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>Posting</th><th>Kind</th><th>Status</th><th>Interest</th><th></th></tr></thead>
+              <tbody>
+                {% for job in my_jobs %}
+                  <tr>
+                    <td>
+                      <a href="{{ url_for('jobs.detail', job_id=job.id) }}">{{ job.title }}</a>
+                      <div class="tiny muted">{{ job.company }}</div>
+                    </td>
+                    <td class="small">Job</td>
+                    <td><span class="badge {{ 'ok' if job.status == 'approved' else 'warn' }}">{{ job.status|title }}</span></td>
+                    <td>{{ job.applications|length }} applicant{{ '' if job.applications|length == 1 else 's' }}</td>
+                    <td class="nowrap">
+                      <a class="btn sm outline" href="{{ url_for('jobs.applicants', job_id=job.id) }}">Review</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+                {% for internship in my_internships %}
+                  <tr>
+                    <td>
+                      <a href="{{ url_for('internships.detail', internship_id=internship.id) }}">{{ internship.title }}</a>
+                      <div class="tiny muted">{{ internship.organisation }}</div>
+                    </td>
+                    <td class="small">Internship</td>
+                    <td>{{ internship_status_badge(internship) }}</td>
+                    <td>{{ internship.interests|length }} interested</td>
+                    <td class="nowrap">
+                      <a class="btn sm outline" href="{{ url_for('internships.interested', internship_id=internship.id) }}">Review</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {{ empty_state("You have not posted anything yet.",
+                         "Staff postings go live without waiting for moderation.") }}
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Alumni open to work</h2>
+          <a class="small" href="{{ url_for('profiles.directory', role='seekers') }}">All {{ stats.seekers }} →</a>
+        </div>
+        {% if open_to_work %}
+          <div class="grid cols-2">
+            {% for profile in open_to_work %}{{ member_card(profile) }}{% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted mb0">Nobody is marked open to work at the moment.</p>
+        {% endif %}
+      </div>
+
+      {% if my_talks %}
+        <div class="card">
+          <div class="card-head"><h2>My sessions</h2></div>
+          <ul class="list-plain">
+            {% for talk in my_talks %}
+              <li class="row between">
+                <div>
+                  <span class="strong">{{ talk.title }}</span>
+                  <div class="tiny muted">{{ talk.when_label }} · {{ talk.mode }}{% if talk.venue %} · {{ talk.venue }}{% endif %}</div>
+                </div>
+                <span class="badge {{ 'ok' if talk.status == 'confirmed' else ('danger' if talk.status == 'cancelled' else 'warn') }}">
+                  {{ talk.status|title }}
+                </span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="stack">
+      <div class="card center">
+        {% if record and record.photo_filename %}
+          <img class="avatar lg" src="{{ url_for('static', filename='uploads/photos/' ~ record.photo_filename) }}" alt="">
+        {% else %}
+          <span class="avatar lg">{{ record.initials if record else current_user.full_name[:1]|upper }}</span>
+        {% endif %}
+        <h3 class="mt2 mb0">{{ current_user.full_name }}</h3>
+        <p class="small muted">{{ current_user.email }}</p>
+        <span class="badge brand">{{ current_user.role_label }}</span>
+        <div class="stack mt2">
+          {% if record %}
+            <a class="btn block" href="{{ url_for('staff.my_entry') }}">Edit my faculty entry</a>
+            <a class="btn outline block" href="{{ url_for('main.faculty') }}">See the faculty page</a>
+          {% endif %}
+          <a class="btn outline block" href="{{ url_for('auth.change_password') }}">Change password</a>
+        </div>
+      </div>
+
+      {% if record %}
+        <div class="card">
+          <h3>My entry</h3>
+          <dl class="kv">
+            <dt>Designation</dt><dd>{{ record.designation or '—' }}</dd>
+            <dt>Qualification</dt><dd>{{ record.qualification or '—' }}</dd>
+            <dt>Specialisation</dt><dd>{{ record.specialization or '—' }}</dd>
+            <dt>Shown email</dt><dd>{{ record.email or '—' }}</dd>
+            <dt>Shown phone</dt><dd>{{ record.phone or '—' }}</dd>
+            <dt>Serving since</dt><dd>{{ record.served_from or '—' }}</dd>
+          </dl>
+          <p class="tiny muted mb0">
+            Name, designation and tenure are maintained by the department office.
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>Where to look</h3>
+        <ul class="list-plain small">
+          <li><a href="{{ url_for('profiles.directory') }}">Alumni directory</a> — with resumes</li>
+          <li><a href="{{ url_for('profiles.batches') }}">Batch register</a></li>
+          <li><a href="{{ url_for('main.placements') }}">Placements through the portal</a></li>
+          <li><a href="{{ url_for('internships.listing') }}">Internships for our students</a></li>
+          <li><a href="{{ url_for('main.talks') }}">Talks &amp; sessions</a></li>
+          <li><a href="{{ url_for('messages.inbox') }}">Messages</a></li>
+        </ul>
+      </div>
+
+      {% if recent_placements %}
+        <div class="card">
+          <h3>Recently placed</h3>
+          <ul class="list-plain small">
+            {% for row in recent_placements %}
+              <li>
+                <a href="{{ url_for('profiles.view_profile', user_id=row.applicant_id) }}">{{ row.applicant.full_name }}</a>
+                <div class="tiny muted">{{ row.job.title }} · {{ row.job.company }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </aside>
+  </div>
+{% endblock %}

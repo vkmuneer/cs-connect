@@ -10,7 +10,8 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.forms import (
     AdminUserForm, AnnouncementForm, ConfirmForm, CoordinatorForm, DepartmentForm,
-    FacultyForm, FeatureAlumnusForm, FeatureToggleForm, GalleryAlbumForm,
+    FacultyAccountForm, FacultyForm, FeatureAlumnusForm, FeatureToggleForm,
+    GalleryAlbumForm,
     GalleryImageForm, GalleryUploadForm, JobModerationForm, PortalSettingsForm,
     SiteLinksForm, SitePageForm, TalkSessionForm,
 )
@@ -61,6 +62,7 @@ def dashboard():
         "applications": Application.query.count(),
         "messages": Message.query.count(),
         "faculty": Faculty.query.count(),
+        "faculty_logins": Faculty.query.filter(Faculty.user_id.isnot(None)).count(),
         "announcements": Announcement.query.count(),
         "skills": Skill.query.count(),
         "placements": Application.placement_count(),
@@ -1441,3 +1443,94 @@ def reset_content():
             "info",
         )
     return redirect(url_for("admin.content"))
+
+
+# --------------------------------------------------------------------------
+# Teacher logins, created from the faculty list
+# --------------------------------------------------------------------------
+@admin_bp.route("/faculty/<int:faculty_id>/login", methods=["GET", "POST"])
+def faculty_login(faculty_id):
+    """Give a teacher an account, or reset the password on the one they have."""
+    from app.seed import generate_password
+
+    member = db.session.get(Faculty, faculty_id)
+    if member is None:
+        abort(404)
+
+    form = FacultyAccountForm()
+    if request.method == "GET":
+        form.email.data = (member.account.email if member.account else member.email) or ""
+
+    if form.validate_on_submit():
+        email = form.email.data.lower().strip()
+        clash = User.query.filter(
+            User.email == email,
+            User.id != (member.user_id or 0),
+        ).first()
+        if clash:
+            flash(
+                f"{email} already belongs to another account "
+                f"({clash.role_label}). Use a different address.",
+                "danger",
+            )
+            return render_template("admin/faculty_login.html", form=form, member=member)
+
+        password = form.password.data or generate_password()
+        generated = not form.password.data
+
+        if member.account is None:
+            account = User(
+                email=email, full_name=member.name, role=Role.FACULTY,
+                is_approved=True,
+            )
+            account.set_password(password)
+            db.session.add(account)
+            db.session.flush()
+            member.user_id = account.id
+            action, verb = "faculty_login_create", "created"
+        else:
+            account = member.account
+            account.email = email
+            account.full_name = member.name
+            account.role = Role.FACULTY
+            account.is_approved = True
+            account.is_blocked = False
+            account.set_password(password)
+            action, verb = "faculty_login_reset", "reset"
+
+        ActivityLog.record(current_user, action, f"{member.name} <{email}>")
+        db.session.commit()
+
+        if generated:
+            flash(
+                f"Login {verb} for {member.name}. Email: {email} — "
+                f"password: {password} — copy it now, it is not stored anywhere.",
+                "success",
+            )
+        else:
+            flash(f"Login {verb} for {member.name} ({email}).", "success")
+        return redirect(url_for("admin.faculty"))
+
+    return render_template("admin/faculty_login.html", form=form, member=member)
+
+
+@admin_bp.route("/faculty/<int:faculty_id>/revoke-login", methods=["POST"])
+def revoke_faculty_login(faculty_id):
+    member = db.session.get(Faculty, faculty_id)
+    if member is None:
+        abort(404)
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        if member.account is None:
+            flash(f"{member.name} has no login to revoke.", "info")
+        elif member.user_id == current_user.id:
+            flash("You cannot revoke your own access.", "danger")
+        else:
+            account = member.account
+            label = f"{member.name} <{account.email}>"
+            member.user_id = None
+            db.session.delete(account)
+            ActivityLog.record(current_user, "faculty_login_revoke", label)
+            db.session.commit()
+            flash(f"The login for {member.name} has been removed.", "info")
+    return redirect(url_for("admin.faculty"))

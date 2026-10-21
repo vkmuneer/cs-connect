@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, file_field %}
+{% block title %}My faculty entry{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div class="crumbs">
+      <a href="{{ url_for('staff.dashboard') }}">Staff dashboard</a> / My faculty entry
+    </div>
+    <h1>My entry on the faculty page</h1>
+    <p class="lede">
+      What visitors see about you at
+      <a href="{{ url_for('main.faculty') }}">{{ SITE_NAME }} → Faculty</a>.
+    </p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="split">
+      <div class="card">
+        {{ field(form.qualification, placeholder="e.g. Ph.D (Computer Science) 2024, MCA 2008, UGC-NET") }}
+        {{ field(form.specialization, placeholder="e.g. Machine Learning, Speech Processing") }}
+        <div class="grid cols-2">
+          {{ field(form.email) }}
+          {{ field(form.phone) }}
+        </div>
+        {{ field(form.profile_url, placeholder="https://sscollege.ac.in/staff-details/…") }}
+      </div>
+      <aside class="stack">
+        <div class="card">
+          {% if record.photo_filename %}
+            <img class="avatar lg mb2" src="{{ url_for('static', filename='uploads/photos/' ~ record.photo_filename) }}" alt="">
+          {% endif %}
+          {{ file_field(form.photo, "PNG, JPG or WebP. Resized automatically.") }}
+        </div>
+        <div class="card">
+          <h3>Maintained by the office</h3>
+          <dl class="kv">
+            <dt>Name</dt><dd>{{ record.name }}</dd>
+            <dt>Designation</dt><dd>{{ record.designation or '—' }}</dd>
+            <dt>Tenure</dt><dd>{{ record.tenure or '—' }}</dd>
+          </dl>
+          <p class="tiny muted mb0">
+            Ask the department office to change these.
+          </p>
+        </div>
+        <div class="card">
+          <button class="btn block" type="submit">Save my entry</button>
+          <a class="btn outline block mt1" href="{{ url_for('staff.dashboard') }}">Cancel</a>
+        </div>
+      </aside>
+    </div>
+  </form>
+{% endblock %}

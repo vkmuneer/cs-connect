@@ -145,7 +145,12 @@ def login():
 
         next_page = request.args.get("next")
         if not _is_safe_redirect(next_page):
-            next_page = url_for("admin.dashboard") if user.is_admin else url_for("main.index")
+            if user.is_admin:
+                next_page = url_for("admin.dashboard")
+            elif user.is_faculty:
+                next_page = url_for("staff.dashboard")
+            else:
+                next_page = url_for("main.index")
         flash(f"Welcome back, {user.full_name.split()[0]}!", "success")
         return redirect(next_page)
 

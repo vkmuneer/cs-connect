@@ -6,7 +6,10 @@
     <div class="row between">
       <div>
         <h1>Faculty records</h1>
-        <p class="lede">The list shown on the public faculty page.</p>
+        <p class="lede">
+          The list shown on the public faculty page — and where a teacher is given
+          a login of their own.
+        </p>
       </div>
       <a class="btn" href="{{ url_for('admin.edit_faculty') }}">Add faculty</a>
     </div>
@@ -17,7 +20,7 @@
   {% if members %}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Name</th><th>Designation</th><th>Specialisation</th><th>Tenure</th><th>Status</th><th>Order</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Designation</th><th>Specialisation</th><th>Tenure</th><th>Status</th><th>Login</th><th></th></tr></thead>
         <tbody>
           {% for member in members %}
             <tr>
@@ -38,10 +41,28 @@
               <td class="small">{{ member.specialization or '—' }}</td>
               <td class="small nowrap">{{ member.tenure or '—' }}</td>
               <td>{% if member.is_current %}<span class="badge ok">Serving</span>{% else %}<span class="badge">Former</span>{% endif %}</td>
-              <td class="small">{{ member.sort_order }}</td>
+              <td>
+                {% if member.has_login %}
+                  <span class="badge brand">Can sign in</span>
+                  <div class="tiny muted">{{ member.account.email }}</div>
+                  <div class="tiny muted">
+                    {{ 'last in ' ~ member.account.last_login_at.strftime('%d %b %Y') if member.account.last_login_at else 'never signed in' }}
+                  </div>
+                {% else %}
+                  <span class="badge">No login</span>
+                {% endif %}
+              </td>
               <td class="nowrap">
                 <div class="btn-group">
                   <a class="btn sm outline" href="{{ url_for('admin.edit_faculty', faculty_id=member.id) }}">Edit</a>
+                  <a class="btn sm {{ 'outline' if member.has_login else '' }}"
+                     href="{{ url_for('admin.faculty_login', faculty_id=member.id) }}">
+                    {{ 'Reset password' if member.has_login else 'Create login' }}
+                  </a>
+                  {% if member.has_login %}
+                    {{ confirm_button(confirm_form, url_for('admin.revoke_faculty_login', faculty_id=member.id),
+                                      'Revoke', 'btn sm outline', 'Remove this teacher\'s login?') }}
+                  {% endif %}
                   {{ confirm_button(confirm_form, url_for('admin.delete_faculty', faculty_id=member.id), 'Delete', 'btn sm danger', 'Remove this faculty record?') }}
                 </div>
               </td>

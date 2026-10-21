@@ -24,6 +24,9 @@ ADDED_COLUMNS = {
     "coordinators": {
         "batch_year": "INTEGER",
     },
+    "faculty": {
+        "user_id": "INTEGER REFERENCES users(id)",
+    },
 }
 
 

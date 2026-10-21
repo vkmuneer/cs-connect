@@ -33,7 +33,10 @@ job_skills = db.Table(
 # --------------------------------------------------------------------------
 class Role:
     ADMIN = "admin"
+    FACULTY = "faculty"   # a teacher of the department
     MEMBER = "member"
+    ALL = [ADMIN, FACULTY, MEMBER]
+    LABELS = {ADMIN: "Administrator", FACULTY: "Faculty", MEMBER: "Member"}
 
 
 class Programme:
@@ -147,14 +150,32 @@ class User(UserMixin, db.Model):
         return self.role == Role.ADMIN
 
     @property
+    def is_faculty(self):
+        return self.role == Role.FACULTY
+
+    @property
+    def is_staff(self):
+        """Department staff: an administrator or a teacher."""
+        return self.role in (Role.ADMIN, Role.FACULTY)
+
+    @property
+    def role_label(self):
+        return Role.LABELS.get(self.role, self.role.title())
+
+    @property
     def is_active(self):
         """Flask-Login uses this to block sign-in for suspended accounts."""
         return not self.is_blocked
 
     @property
     def can_participate(self):
-        """Approved (or admin) members may post jobs and appear in the directory."""
-        return self.is_admin or (self.is_approved and not self.is_blocked)
+        """Who may post, apply, message and read resumes.
+
+        Staff always may; a member once an administrator has verified them.
+        """
+        if self.is_blocked:
+            return False
+        return self.is_staff or self.is_approved
 
     def __repr__(self):
         return f"<User {self.email}>"
@@ -759,6 +780,11 @@ class Faculty(db.Model):
     phone = db.Column(db.String(32))
     photo_filename = db.Column(db.String(255))
 
+    # The portal account this teacher signs in with, if one has been created.
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), unique=True, index=True,
+    )
+
     is_current = db.Column(db.Boolean, default=True, nullable=False, index=True)
     is_hod = db.Column(db.Boolean, default=False, nullable=False)
     served_from = db.Column(db.Integer)
@@ -766,6 +792,18 @@ class Faculty(db.Model):
     sort_order = db.Column(db.Integer, default=100, nullable=False)
     profile_url = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
+
+    account = db.relationship("User", backref=db.backref("faculty_record", uselist=False))
+
+    @property
+    def has_login(self):
+        return self.user_id is not None
+
+    @classmethod
+    def for_user(cls, user):
+        if not user or not getattr(user, "id", None):
+            return None
+        return cls.query.filter_by(user_id=user.id).first()
 
     @property
     def tenure(self):
