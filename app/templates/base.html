@@ -26,12 +26,12 @@
   <div class="wrap">
     <a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/college-logo.png') }}" alt="{{ COLLEGE_NAME }}"></a>
     <div class="titles">
-      <div class="college">{{ COLLEGE_NAME }}</div>
-      <div class="dept">{{ DEPARTMENT_NAME }} · Affiliated to the University of Calicut</div>
+      <div class="sitename">{{ SITE_NAME }}</div>
+      <div class="tagline">An initiative by the alumni of the {{ DEPARTMENT_NAME }}</div>
     </div>
     <div class="portal">
-      <div class="name">{{ SITE_NAME }}</div>
-      <div class="tag">Alumni Network</div>
+      <div class="name">{{ COLLEGE_NAME }}</div>
+      <div class="tag">{{ COLLEGE_PLACE }}</div>
     </div>
   </div>
 </header>
